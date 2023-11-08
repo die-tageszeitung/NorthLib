@@ -304,17 +304,17 @@ double dist ( double d1, double d2 ) {
   unlink(fn2);
 }
 
-- (void) testTty {
-  char buff[101];
-  tty_t *input = tty_open(0);
-  tty_t *output = tty_open(1);
-  tty_write(output, "login: ");
-  tty_gets(input, buff, 100);
-  tty_write(output, buff);
-  tty_write(output, "\npassword: ");
-  tty_negets(input, buff, 100);
-  tty_write(output, buff);
-  tty_write(output, "\n");
-}
+//- (void) testTty {
+//  char buff[101];
+//  tty_t *input = tty_open(0);
+//  tty_t *output = tty_open(1);
+//  tty_write(output, "login: ");
+//  tty_gets(input, buff, 100);
+//  tty_write(output, buff);
+//  tty_write(output, "\npassword: ");
+//  tty_negets(input, buff, 100);
+//  tty_write(output, buff);
+//  tty_write(output, "\n");
+//}
 
 @end
