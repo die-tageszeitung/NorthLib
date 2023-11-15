@@ -171,9 +171,19 @@ open class Database: DoesLog, ToString {
     "\(name), model(\(modelName)):\n  \(dbPath)"
   }
 
-  public func save(_ context: NSManagedObjectContext? = nil) {
-    let ctx = (context != nil) ? context : self.context
-    if ctx!.hasChanges { try! ctx!.save() }
+  public func save(_ context: NSManagedObjectContext? = nil, errorCallback: ((NSManagedObjectContext, Error) -> ())? = nil) {
+    guard let ctx = (context != nil) ? context : self.context else {
+      log("Fatal: no Context to save")
+      return
+    }
+    guard ctx.hasChanges else { return }
+    do {
+      try ctx.save()
+    }
+    catch let error {
+      log("fail to save with error: \(error)")
+      errorCallback?(ctx, error)
+    }
   }
   
   public func inBackground(_ closure: @escaping (NSManagedObjectContext)->()) {

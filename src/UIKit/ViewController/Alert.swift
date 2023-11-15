@@ -59,11 +59,29 @@ open class Alert {
   public static func message(title: String? = nil,
                              message: String,
                              actions : [UIAlertAction],
+                             aditionalView: UIView? = nil,
                              presentationController: UIViewController? = nil) {
     onMain {
       let alert = AlertController(title: title, message: message, preferredStyle: .alert)
       for action in actions {
         alert.addAction(action)
+      }
+      if let aditionalView = aditionalView {
+//        alert.view.addSubview(aditionalView)
+        alert.addTextField { tf in
+          let layer = UIView()
+          layer.backgroundColor = .red
+          layer.onTapping { _ in
+            layer.backgroundColor = .green
+          }
+          tf.borderStyle = .none
+          tf.addSubview(layer)
+          pin(layer, to: tf)
+        }
+//        let target: UIView = alert.textFields?.first ?? alert.view
+//        pin(aditionalView.left, to: target.left)
+//        pin(aditionalView.right, to: target.right)
+//        pin(aditionalView.bottom, to: target.bottom)
       }
       let target = presentationController ?? UIViewController.top()
       target?.present(alert, animated: true, completion: nil)
