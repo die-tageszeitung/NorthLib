@@ -165,7 +165,7 @@ open class VCTable: UIViewController, UITableViewDelegate,
   
   /// Destruct previously created VC in case of single VC on window
   override open func viewWillAppear(_ animated: Bool) {
-    super.viewDidAppear(animated)
+    super.viewWillAppear(animated)
     self.navigationController?.setNavigationBarHidden(true, animated: false)
   }
   
