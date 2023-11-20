@@ -179,22 +179,22 @@ open class App {
     
   /// Version string of currently running app
   public static var bundleVersion: String {
-    return info["CFBundleShortVersionString"] as! String
+    return info["CFBundleShortVersionString"] as? String ?? "0.0"
   }
   
   /// Name of currently running app
   public static var name: String {
-    return info["CFBundleDisplayName"] as! String
+    return info["CFBundleDisplayName"] as? String ?? "foo"
   }
 
   /// Build number of currently running app
   public static var buildNumber: String {
-    return info["CFBundleVersion"] as! String
+    return info["CFBundleVersion"] as? String ?? "0.0.1"
   }
     
   /// Bundle identifier of currently running app
   public static var bundleIdentifier: String {
-    return info["CFBundleIdentifier"] as! String
+    return info["CFBundleIdentifier"] as? String ?? "com.foo.generic"
   }
   
   /// Version of running app

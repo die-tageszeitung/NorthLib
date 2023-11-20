@@ -13,7 +13,7 @@ import PackageDescription
 let providerXml: [SystemPackageProvider] = [ .apt(["libxml2-dev"]) ]
 let providerZlib: [SystemPackageProvider] = [ .apt(["zlib-dev"]) ]
 
-var linkerSettings: [LinkerSetting] = [.linkedLibrary("z"), .linkedLibrary("c++")]
+var linkerSettings: [LinkerSetting] = [.linkedLibrary("z")]
 
 var targets: [Target] = [
   .systemLibrary(

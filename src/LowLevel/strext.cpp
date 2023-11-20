@@ -926,7 +926,9 @@ char *str_trim(const char *str) {
   str_cpy(&d, l, s);
   while ((d > tmp) && isspace(*(d-1))) d--;
   *d = 0;
-  return str_heap(tmp, 0);
+  char *ret = str_heap(tmp, 0);
+  str_release(&tmp);
+  return ret;
 }
 
 /// str_2upper converts all ASCII characters in 'str' to upper case.

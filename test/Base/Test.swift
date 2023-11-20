@@ -639,3 +639,15 @@ class UsTimeTests: XCTestCase {
   }
   
 }
+
+//class ConsoleTests: XCTestCase {
+//  
+//  func testIO() async {
+//    let con = Console()
+//    con.puts("login: ")
+//    if let s = await con.gets() { con.putsln(s) }
+//    con.puts("password: ")
+//    if let s = await con.negets() { con.putsln(s) }
+//  }
+//  
+//}

@@ -18,10 +18,10 @@ public extension UIImage {
       try! data.write(to: URL(fileURLWithPath: to), options: [])
     }
   }
-    
+      
   /// Initialize with animated gif data
   static func animatedGif(_ data: Data) -> UIImage? {
-    guard let source =  CGImageSourceCreateWithData(data as CFData, nil)
+    guard let source =  CGImageSourceCreateWithData(data as CFData, nil) 
       else { return nil }
     var images = [CGImage]()
     var delays = [Int]()

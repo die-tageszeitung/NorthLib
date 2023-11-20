@@ -13,3 +13,4 @@
 #include "../zip.h"
 #include "../tzdata.h"
 #include "../numeric.h"
+#include "../tty.h"

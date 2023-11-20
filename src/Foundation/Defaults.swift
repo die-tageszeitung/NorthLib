@@ -39,6 +39,11 @@ public final class Defaults: KVStore, Singleton {
   /// Init with suite name to share defaults between apps
   public init(suite: String? = nil) {
     super.init(base: DefaultsBase(suite: suite), name: nil, suite: suite)
+    if Device.isIphone { addScope("iPhone") }
+    else if Device.isIpad { addScope("iPad") }
+    else if Device.isMac { addScope("mac") }
+    else if Device.isTv { addScope("tv") }
+    else if Device.isSimulator { addScope("simulator") }
   }
 
 }
