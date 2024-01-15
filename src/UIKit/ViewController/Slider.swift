@@ -366,10 +366,12 @@ open class MyButtonSlider:ButtonSlider{
   
   let ContentSliderMaxWidth = 420.0
   
+  open var openShiftRatio: CGFloat = 0.7
+  
   open var ocoverage: CGFloat? {
     didSet {
       guard let ocoverage = ocoverage, isOpen else { return }
-      shiftRatio = ocoverage < ContentSliderMaxWidth ? 0.7 : 0.1
+      shiftRatio = ocoverage < ContentSliderMaxWidth ? openShiftRatio : 0.1
       resetConstraints()
     }
   }
@@ -379,7 +381,7 @@ open class MyButtonSlider:ButtonSlider{
   }
   open override func slide(toOpen: Bool, animated: Bool = true) {
     if toOpen == true, let ocoverage = ocoverage, ocoverage < ContentSliderMaxWidth {
-      shiftRatio = 0.7
+      shiftRatio = openShiftRatio
     }
     else if toOpen == false && shiftRatio != 0.1 {
       shiftRatio = 0.1
