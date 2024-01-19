@@ -370,6 +370,7 @@ open class MyButtonSlider:ButtonSlider{
   
   open var ocoverage: CGFloat? {
     didSet {
+      if oldValue == ocoverage { return }
       guard let ocoverage = ocoverage, isOpen else { return }
       shiftRatio = ocoverage < ContentSliderMaxWidth ? openShiftRatio : 0.1
       resetConstraints()
