@@ -18,6 +18,7 @@ open class DatePickerController: UIViewController, UIPickerViewDelegate, UIPicke
   public var doneHandler: (() -> ())?
   var initialSelectedDate : Date?
   public var pickerFont : UIFont?
+  public var isMonthly = false
   
   public var selectedDate : Date {
     get {
@@ -32,11 +33,20 @@ open class DatePickerController: UIViewController, UIPickerViewDelegate, UIPicke
   /// e.g. user selects 31.4 will be fixed to 30.4.
   var _selectedDate : Date {
     get {
+      var day: Int
+      var base: Int
+      if isMonthly {
+        day = 14
+        base = -1
+      }
+      else { 
+        day = self.picker.selectedRow(inComponent: 0) + 1
+        base = 0
+      }
       var dc = DateComponents(calendar: Calendar.current,
-                                    year: self.picker.selectedRow(inComponent: 2) + data.minimumYear,
-                                    month: self.picker.selectedRow(inComponent: 1) + 1,
-                                    day: self.picker.selectedRow(inComponent: 0) + 1,
-                                    hour: 12)
+                              year: self.picker.selectedRow(inComponent: base + 2) + data.minimumYear,
+                              month: self.picker.selectedRow(inComponent: base + 1) + 1,
+                              day: day, hour: 12)
       var changed = false
       
       while !dc.isValidDate {
@@ -54,9 +64,10 @@ open class DatePickerController: UIViewController, UIPickerViewDelegate, UIPicke
     }
   }
   
-  public init(minimumDate:Date, maximumDate:Date, selectedDate:Date) {
+  public init(minimumDate:Date, maximumDate:Date, selectedDate:Date, isMonthly: Bool = false) {
     data = DatePickerData(minimumDate: minimumDate, maximumDate: maximumDate)
     initialSelectedDate = selectedDate
+    self.isMonthly = isMonthly
     super.init(nibName: nil, bundle: nil)
   }
   
@@ -140,20 +151,13 @@ extension DatePickerController {
       label?.font = pickerFont ?? UIFont.preferredFont(forTextStyle: .headline)
     }
     label!.textColor = textColor
-    if component == 0 {
-      label!.text = data.dayLabel(idx: row)
+    let base: Int = isMonthly ? 1 : 0
+    switch base + component {
+      case 0: label!.text = data.dayLabel(idx: row)
+      case 1: label!.text = data.monthLabel(idx: row)
+      case 2: label!.text = data.yearLabel(idx: row)
+      default: label!.text = "*"
     }
-    else if component == 1 {
-      label!.text = data.monthLabel(idx: row)
-      
-    }
-    else if component == 2 {
-      label!.text = data.yearLabel(idx: row)
-      
-    } else {
-      label!.text = "*"
-    }
-    
     return label!
   }
   
@@ -184,28 +188,28 @@ extension DatePickerController {
   }
   
   func setDate(_ date:Date, animated:Bool){
-    self.picker.selectRow((date.components().day ?? 1) - 1, inComponent: 0, animated: animated)
-    self.picker.selectRow((date.components().month ?? 1) - 1, inComponent: 1, animated: animated)
-    self.picker.selectRow((date.components().year ?? 0) - data.minimumYear, inComponent: 2, animated: animated)
+    let base: Int = isMonthly ? -1 : 0
+    if !isMonthly {
+      self.picker.selectRow((date.components().day ?? 1) - 1, inComponent: 0, animated: animated)
+    }
+    self.picker.selectRow((date.components().month ?? 1) - 1, inComponent: base + 1, animated: animated)
+    self.picker.selectRow((date.components().year ?? 0) - data.minimumYear, inComponent: base + 2, animated: animated)
   }
 }
 
 // MARK: - UIPickerViewDataSource protocol
 extension DatePickerController{
   
-  public func numberOfComponents(in pickerView: UIPickerView) -> Int { 3 }
+  public func numberOfComponents(in pickerView: UIPickerView) -> Int { isMonthly ? 2 : 3 }
   
   public func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-    if component == 0 {
-      return data.dayIniciesCount
+    let base: Int = isMonthly ? 1 : 0
+    switch base + component {
+      case 0: return data.dayIniciesCount
+      case 1: return data.monthIniciesCount
+      case 2: return data.yearIniciesCount
+      default: return 0 
     }
-    else if component == 1 {
-      return data.monthIniciesCount
-    }
-    else if component == 2 {
-      return data.yearIniciesCount
-    }
-    return 0
   }
 }
 
