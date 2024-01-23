@@ -12,6 +12,7 @@ import UIKit
 /// Provides functionallity to view, zoom in PDF Pages. Swipe on Side Corner shows next/prev Page if available
 open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
   open override var preventEdgeTapToNavigate: Bool { false }
+  var useTopGradient: Bool
   public var cellScrollIndicatorInsets:UIEdgeInsets?
   public var cellVerticalScrollIndicatorInsets:UIEdgeInsets?
   public var cellHorizontalScrollIndicatorInsets:UIEdgeInsets?
@@ -29,6 +30,7 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
     }
   }
   
+  
   func updateData(){
     guard let model = pdfModel else { return }
     self.index = model.index
@@ -36,8 +38,9 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
     self.collectionView?.reloadData()
   }
   
-  public init(data:PdfModel) {
+  public init(data:PdfModel, useTopGradient: Bool) {
     self.pdfModel = data
+    self.useTopGradient = useTopGradient
     super.init()
     updateData()
   }
@@ -63,6 +66,7 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
   }
   
   func setupTopGradient() {
+    guard useTopGradient else { return }
     topGradient.pinHeight(UIWindow.topInset)
     self.view.addSubview(topGradient)
     pin(topGradient.left, to: self.view.left)
