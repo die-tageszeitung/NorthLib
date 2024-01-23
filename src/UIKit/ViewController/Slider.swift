@@ -389,6 +389,10 @@ open class MyButtonSlider:ButtonSlider{
     }
     super.slide(toOpen: toOpen, animated: animated)
   }
+  
+  open func hideContentAnimated(){
+    contentView.hideAnimated()
+  }
 }
 
 
