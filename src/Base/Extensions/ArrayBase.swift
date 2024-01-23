@@ -79,3 +79,24 @@ extension Array: Copying where Element: Copying {
   }
   
 }
+
+extension Array {
+  /// The penultimate element of the collection.
+  ///
+  /// If the collection is empty, or has less then 2 elements the value of this property is `nil`.
+  ///
+  ///     let numbers = [10, 20, 30, 40, 50]
+  ///     if let 2ndLastNumber = numbers.penultimate {
+  ///         print(2ndLastNumber)
+  ///     }
+  ///     // Prints "10"
+  @inlinable public var penultimate: Element? {
+    get{
+      let idx = count - 2///-2!! -1 is last!!
+      guard idx >= 0 else { return nil }
+      return valueAt(idx)
+    }
+  }
+}
+
+
