@@ -363,8 +363,18 @@ open class Slider: NSObject, DoesLog, HandleOrientation {
  *   in release only in debug
  */
 open class MyButtonSlider:ButtonSlider{
+  private var _contentSliderMaxWidth: CGFloat = 420.0
   
-  let ContentSliderMaxWidth = 420.0
+  public var contentSliderMaxWidth: CGFloat {
+    get {
+      guard let ocoverage = ocoverage else { return _contentSliderMaxWidth }
+      if abs(ocoverage-_contentSliderMaxWidth) < 20 { return ocoverage }
+      return _contentSliderMaxWidth
+    }
+    set {
+      _contentSliderMaxWidth = newValue
+    }
+  }
   
   open var openShiftRatio: CGFloat = 0.7
   
@@ -372,7 +382,7 @@ open class MyButtonSlider:ButtonSlider{
     didSet {
       if oldValue == ocoverage { return }
       guard let ocoverage = ocoverage, isOpen else { return }
-      shiftRatio = ocoverage < ContentSliderMaxWidth ? openShiftRatio : 0.1
+      shiftRatio = ocoverage <= contentSliderMaxWidth ? openShiftRatio : 0.1
       resetConstraints()
     }
   }
@@ -381,7 +391,7 @@ open class MyButtonSlider:ButtonSlider{
     set { super.coverage = newValue }
   }
   open override func slide(toOpen: Bool, animated: Bool = true) {
-    if toOpen == true, let ocoverage = ocoverage, ocoverage < ContentSliderMaxWidth {
+    if toOpen == true, let ocoverage = ocoverage, ocoverage <= contentSliderMaxWidth {
       shiftRatio = openShiftRatio
     }
     else if toOpen == false && shiftRatio != 0.1 {
