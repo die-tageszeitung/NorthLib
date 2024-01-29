@@ -9,7 +9,16 @@ import UIKit
 
 
 public extension UIColor {
-
+  
+  /// Create a dynamic color that responds to `userInterfaceStyle` trait changes
+  /// - Parameters:
+  ///   - light: color value to use for lightMode
+  ///   - dark: color to use for darkMode
+  convenience init(light: UIColor, dark: UIColor) {
+    guard #available(iOS 13.0, *) else { self.init(cgColor: light.cgColor); return }
+    self.init(dynamicProvider: { $0.userInterfaceStyle == .dark ? dark : light })
+  }
+  
   /// Returns a UIColor from an Int with 0xRRGGBB
   static func rgb(_ color: Int, alpha: CGFloat = 1.0) -> UIColor {
     let blue:CGFloat = CGFloat(color & 0xff),
