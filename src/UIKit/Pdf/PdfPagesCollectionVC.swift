@@ -16,6 +16,7 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
   public var cellScrollIndicatorInsets:UIEdgeInsets?
   public var cellVerticalScrollIndicatorInsets:UIEdgeInsets?
   public var cellHorizontalScrollIndicatorInsets:UIEdgeInsets?
+  public var useTopGradient = true
   var whenScrolledHandler : WhenScrolledHandler?
   let topGradient = VerticalGradientView()
   public func whenScrolled(minRatio: CGFloat, _ closure: @escaping (CGFloat) -> ()) {
