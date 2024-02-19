@@ -181,6 +181,9 @@ open class PageCollectionVC: UIViewController {
     onLeftTapClosure = closure
   }
   
+  public private(set) var leftTapEnEdgeButton: UIView?
+  public private(set) var rightTapEnEdgeButton: UIView?
+  
   func setupTapArea(){
     if edgeTapToNavigate == false { return }
     if preventEdgeTapToNavigate == true { return }
@@ -215,6 +218,9 @@ open class PageCollectionVC: UIViewController {
       guard let idx = self?.index else { return }
       self?.collectionView?.scrollto(idx+1, animated: true)
     }
+    
+    leftTapEnEdgeButton = left
+    rightTapEnEdgeButton = right
   }
   
   // TODO: transition/rotation better with collectionViewLayout subclass as described in:
