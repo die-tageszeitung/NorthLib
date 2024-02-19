@@ -421,7 +421,7 @@ class TestCtrl: UIViewController {
         self?.dsb.indicator.downloadState = .waiting
       }
     }
-    dsb.center()
+    dsb.centerAxis()
     dsb.indicator.downloadState = .waiting
     self.view.backgroundColor = .lightGray
     

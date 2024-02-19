@@ -352,7 +352,7 @@ public extension UIView {
   
   /// Centers  axis to superviews  axis
   @discardableResult
-  func center(_ priority: UILayoutPriority? = nil) -> (x: NSLayoutConstraint? ,y: NSLayoutConstraint?)  {
+  func centerAxis(_ priority: UILayoutPriority? = nil) -> (x: NSLayoutConstraint? ,y: NSLayoutConstraint?)  {
     return (centerX(priority), centerY(priority))
   }
     
