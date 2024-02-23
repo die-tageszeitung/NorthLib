@@ -14,8 +14,8 @@ open class PageCollectionVC: UIViewController {
   /// option to overwrite edge tap enabled for custom subclasses
   open var preventEdgeTapToNavigate: Bool { false }
   
-  @Default("edgeTapToNavigate")
-  public var edgeTapToNavigate: Bool
+  @Default("edgeTapToNavigate2")
+  public var edgeTapToNavigate2: Bool
   
   @Default("edgeTapToNavigateVisible")
   public var edgeTapToNavigateVisible: Bool
@@ -35,11 +35,11 @@ open class PageCollectionVC: UIViewController {
   private var leftTapBottomDistConstraint: NSLayoutConstraint?
   private var rightTapBottomDistConstraint: NSLayoutConstraint?
   
-  open var leftTapBottomDist:CGFloat = -30.0 {
+  open var tapButtonsBottomDist:CGFloat = -30.0 {
     didSet {
       
-      leftTapBottomDistConstraint?.constant = leftTapBottomDist
-      rightTapBottomDistConstraint?.constant = leftTapBottomDist
+      leftTapBottomDistConstraint?.constant = tapButtonsBottomDist
+      rightTapBottomDistConstraint?.constant = tapButtonsBottomDist
     }
   }
   open var leftTapBottomMargin:Bool  = true
@@ -185,7 +185,7 @@ open class PageCollectionVC: UIViewController {
   public private(set) var rightTapEnEdgeButton: UIView?
   
   func setupTapArea(){
-    if edgeTapToNavigate == false { return }
+    if edgeTapToNavigate2 == false { return }
     if preventEdgeTapToNavigate == true { return }
     let size: CGFloat = 100.0
     let left = UIView()
@@ -205,9 +205,9 @@ open class PageCollectionVC: UIViewController {
     pin(left.left, to: self.view.left, dist: -size*0.3)
     pin(right.right, to: self.view.right, dist: size*0.3)
     leftTapBottomDistConstraint
-    = pin(left.bottom, to: self.view.bottomGuide(isMargin: leftTapBottomMargin), dist: leftTapBottomDist)
+    = pin(left.bottom, to: self.view.bottomGuide(isMargin: leftTapBottomMargin), dist: tapButtonsBottomDist)
     rightTapBottomDistConstraint
-    = pin(right.bottom, to: self.view.bottomGuide(isMargin: leftTapBottomMargin), dist: leftTapBottomDist)
+    = pin(right.bottom, to: self.view.bottomGuide(isMargin: leftTapBottomMargin), dist: tapButtonsBottomDist)
     left.onTapping {[weak self] _ in
       if self?.onLeftTapClosure?() == true { return }
       guard let idx = self?.index, idx > 0 else { return }
