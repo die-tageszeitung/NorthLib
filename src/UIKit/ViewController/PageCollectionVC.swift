@@ -120,7 +120,7 @@ open class PageCollectionVC: UIViewController {
 
   @discardableResult
   /// Define closure to call when a cell is newly displayed
-  public func onDisplay(closure: @escaping (Int, OptionalView?)->()) -> String? {
+  public func onDisplay(closure: @escaping (Int, OptionalView?, Bool)->()) -> String? {
     return collectionView?.onDisplay(closure: closure)
   }
   

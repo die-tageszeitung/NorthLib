@@ -50,7 +50,7 @@ open class ImageCollectionVC: PageCollectionVC, ImageCollectionVCSpec {
         self?.defaultOnXHandler()
       }
     }
-    onDisplay { [weak self]  (idx, oview) in
+    onDisplay { [weak self]  (idx, oview, isFromScroll) in
       guard let self = self else { return }
       ///Apply PageControll Dots Update
       guard let pageControl = self.pageControl else { return }

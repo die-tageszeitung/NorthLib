@@ -161,7 +161,7 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
       }
     }*/
     
-    onDisplay { [weak self] (idx, optionalView) in
+    onDisplay { [weak self] (idx, optionalView, isFromScroll) in
       guard let ziv = optionalView as? ZoomedImageView,
             let pdfImg = ziv.optionalImage as? ZoomedPdfImageSpec else { return }
       ziv.menu.menu = self?.menuItems ?? []

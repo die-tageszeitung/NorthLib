@@ -222,7 +222,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
       if let idx = idx, idx != _index { 
         if isInitialized {
           scrollto(idx)
-          callOnDisplay(idx: idx, oview: optionalView(at: idx))
+          callOnDisplay(idx: idx, oview: optionalView(at: idx), isFromScroll: false)
         }
         else { initialIndex = idx }
       } 
@@ -253,7 +253,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
       ///no matter if flag remembersLastFocusedIndexPath is set
       ///ensure index set correctly
       insertItems(at: [ipath])
-      callOnDisplay(idx: _index!, oview: optionalView(at: _index!))
+      callOnDisplay(idx: _index!, oview: optionalView(at: _index!), isFromScroll: false)
     }
   }
   
@@ -271,7 +271,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
       deleteItems(at: [ipath])
       if let i = _index {
 //        debug("Item \(idx) deleted, next index: \(i)")
-        callOnDisplay(idx: i, oview: optionalView(at: i))
+        callOnDisplay(idx: i, oview: optionalView(at: i), isFromScroll: false)
       }
     }
   }
@@ -280,10 +280,10 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   open func reload(index: Int) { reloadItems(at: [IndexPath(item: index, section: 0)]) }
   
   // An array of closures, each is to call when the displayed page changes
-  fileprivate var onDisplayClosures: [String:(Int, OptionalView?)->()] = [:]
+  fileprivate var onDisplayClosures: [String:(Int, OptionalView?, Bool)->()] = [:]
    
   /// Define closure to call when a cell is newly displayed  
-  public func onDisplay(closure: @escaping (Int, OptionalView?)->()) -> String? {
+  public func onDisplay(closure: @escaping (Int, OptionalView?, Bool)->()) -> String? {
     let key = "closure: \(onDisplayClosures.count)"
     onDisplayClosures[key] = closure
     return key
@@ -314,16 +314,16 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   }
 
   /// Call all onDisplay closures
-  fileprivate func callOnDisplay(idx: Int, oview: OptionalView?) 
-  { for cl in onDisplayClosures.values { cl(idx, oview) } }
+  fileprivate func callOnDisplay(idx: Int, oview: OptionalView?, isFromScroll: Bool)
+  { for cl in onDisplayClosures.values { cl(idx, oview, isFromScroll) } }
   
   // updateDisplaying is called when the scrollview has been scrolled which
   // might have changed the view currently visible
-  private func updateDisplaying(_ idx: Int) { 
+  private func updateDisplaying(_ idx: Int, isFromScroll: Bool) {
     if _index != idx {
       _index = idx
-      callOnDisplay(idx: idx, oview: optionalView(at: idx))
-    }  
+      callOnDisplay(idx: idx, oview: optionalView(at: idx), isFromScroll: isFromScroll)
+    }
   }
   
   // Scroll to the cell at position index
@@ -395,7 +395,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   public func scrollViewDidScroll(_ scrollView: UIScrollView) {
     if preventScrollIndexUpdate { return }
     let pageIndex = offset2index(contentOffset.x)
-    if pageIndex != _index { updateDisplaying(pageIndex) }  
+    if pageIndex != _index { updateDisplaying(pageIndex, isFromScroll: true) }  
   }
   
   // When dragging stops, position collection view to a complete page  
