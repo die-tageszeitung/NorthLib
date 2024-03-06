@@ -106,6 +106,13 @@ open class Toolbar: UIToolbar {
       }
   } }
   
+  func isActiveButton(btn: UIView) -> Bool {
+    for itm in bars[_bar].buttonItems() {
+      if itm.customView == btn { return btn.isVisible }
+    }
+    return false
+  }
+  
   /// set color of buttons
   open func setButtonColor( _ color: UIColor ) {
     doButtons { (b: ButtonControl) in b.color = color }

@@ -81,6 +81,20 @@ open class ButtonView: UIView {
     set { hinset = newValue; vinset = newValue }
   }
   
+  public var isHiddenInToolbar: Bool {
+    get {
+      var sv: UIView? = self.superview
+      guard let btnImgView = self.superview else { return true }
+      while true {
+        if sv == nil { return true }
+        if let tb = sv as? Toolbar {
+          return !tb.isActiveButton(btn: btnImgView)
+        }
+        sv = sv?.superview
+      }
+    }
+  }
+  
   fileprivate func setup() {
     contentMode = .redraw
     color = tintColor
