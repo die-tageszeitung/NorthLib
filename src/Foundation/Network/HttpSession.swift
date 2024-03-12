@@ -382,6 +382,10 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   
   /// Cancel outstanding jobs and close URLSession
   public func release() {
+    for job in jobs.values {
+      job.task.cancel()
+    }
+    jobs = [:]
     _session?.invalidateAndCancel()
     _session = nil
     _config = nil
