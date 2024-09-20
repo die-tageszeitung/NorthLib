@@ -95,6 +95,16 @@ class StringTests: XCTestCase {
     XCTAssertEqual("<123>".groupMatches(regexp: #"<(1(\d+))>"#), [["<123>", "123", "23"]])
   }
   
+  
+  func testSemanticVersionCode() {
+    XCTAssertEqual("1.234.567".semanticVersionCode, "1234567")
+    XCTAssertEqual("1.2.3".semanticVersionCode, "1002003")
+    XCTAssertEqual("1.20.30".semanticVersionCode, "1020030")
+    XCTAssertEqual("1.2.03".semanticVersionCode, "1002003")
+    XCTAssertEqual("1.2.103".semanticVersionCode, "1002103")
+    XCTAssertEqual("01.2.103".semanticVersionCode, "1002103")
+//    XCTAssertEqual("01.2.104".semanticVersionCode, "1002103")//Fail test
+  }
 }
 
 class UsTimeTests: XCTestCase {

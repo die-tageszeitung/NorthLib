@@ -197,6 +197,11 @@ open class App {
     return info["CFBundleIdentifier"] as? String ?? "com.foo.generic"
   }
   
+  ///returns semantic version string vor app version comparison e.g. Version 1.2.3 returns 1002003
+  public static var bundleVersionCode: String {
+    return bundleVersion.semanticVersionCode
+  }
+  
   /// Version of running app
   public static var version = Version(App.bundleVersion)
   

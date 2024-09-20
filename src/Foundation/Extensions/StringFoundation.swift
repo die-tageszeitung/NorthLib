@@ -85,3 +85,10 @@ public extension String {
   }
 
 }
+
+public extension String {
+  /// App Version 1.234.567 returns "1234567" | 1.2.3 returns 1002003 | 1.20.30 returns 1020030
+  var semanticVersionCode: String {
+    return "\(Int(self.split(separator: ".").compactMap{String(format: "%03d", Int($0) ?? 0)}.joined()) ?? 42)"
+  }
+}
