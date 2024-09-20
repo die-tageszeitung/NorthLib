@@ -103,6 +103,9 @@ class StringTests: XCTestCase {
     XCTAssertEqual("1.2.03".semanticVersionCode, "1002003")
     XCTAssertEqual("1.2.103".semanticVersionCode, "1002103")
     XCTAssertEqual("01.2.103".semanticVersionCode, "1002103")
+    XCTAssertEqual("01.2001.40003".semanticVersionCode, "1200140003")
+    ///Warning: next Increment  is smaller!! 1200140003 >> 12001001, do not use it for 4 digit Version Numbers
+    XCTAssertEqual("01.2002.0000001".semanticVersionCode, "12002001")
 //    XCTAssertEqual("01.2.104".semanticVersionCode, "1002103")//Fail test
   }
 }
