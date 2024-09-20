@@ -198,7 +198,7 @@ open class App {
   }
   
   ///returns semantic version string vor app version comparison e.g. Version 1.2.3 returns 1002003
-  public static var bundleVersionCode: String {
+  public static var bundleVersionCode: Int {
     return bundleVersion.semanticVersionCode
   }
   

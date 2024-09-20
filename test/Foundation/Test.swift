@@ -97,16 +97,16 @@ class StringTests: XCTestCase {
   
   
   func testSemanticVersionCode() {
-    XCTAssertEqual("1.234.567".semanticVersionCode, "1234567")
-    XCTAssertEqual("1.2.3".semanticVersionCode, "1002003")
-    XCTAssertEqual("1.20.30".semanticVersionCode, "1020030")
-    XCTAssertEqual("1.2.03".semanticVersionCode, "1002003")
-    XCTAssertEqual("1.2.103".semanticVersionCode, "1002103")
-    XCTAssertEqual("01.2.103".semanticVersionCode, "1002103")
-    XCTAssertEqual("01.2001.40003".semanticVersionCode, "1200140003")
+    XCTAssertEqual("1.234.567".semanticVersionCode, 1234567)
+    XCTAssertEqual("1.2.3".semanticVersionCode, 1002003)
+    XCTAssertEqual("1.20.30".semanticVersionCode, 1020030)
+    XCTAssertEqual("1.2.03".semanticVersionCode, 1002003)
+    XCTAssertEqual("1.2.103".semanticVersionCode, 1002103)
+    XCTAssertEqual("01.2.103".semanticVersionCode, 1002103)
+    XCTAssertEqual("01.2001.40003".semanticVersionCode, 1200140003)
     ///Warning: next Increment  is smaller!! 1200140003 >> 12001001, do not use it for 4 digit Version Numbers
-    XCTAssertEqual("01.2002.0000001".semanticVersionCode, "12002001")
-//    XCTAssertEqual("01.2.104".semanticVersionCode, "1002103")//Fail test
+    XCTAssertEqual("01.2002.0000001".semanticVersionCode, 12002001)
+    //XCTAssertEqual("01.2.104".semanticVersionCode, 1002103)//Fail test
   }
 }
 

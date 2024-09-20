@@ -89,7 +89,7 @@ public extension String {
 public extension String {
   /// App Version 1.234.567 returns "1234567" | 1.2.3 returns 1002003 | 1.20.30 returns 1020030
   /// Warning   01.2001.40003 > 01.2002.0000001, do not use it for 4 digit Version Numbers
-  var semanticVersionCode: String {
-    return "\(Int(self.split(separator: ".").compactMap{String(format: "%03d", Int($0) ?? 0)}.joined()) ?? 42)"
+  var semanticVersionCode: Int {
+    return Int(self.split(separator: ".").compactMap{String(format: "%03d", Int($0) ?? 0)}.joined()) ?? 42
   }
 }
