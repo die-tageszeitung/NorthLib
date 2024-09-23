@@ -238,6 +238,8 @@ open class PushNotification: NSObject, UNUserNotificationCenterDelegate, DoesLog
   private var permissionClosure: ((PushNotification)->())?
   // Closure to call upon remote push delivery
   private var receiveClosure: ((PushNotification, Payload, FetchCompletionHandler?)->())?
+  // Closure to call upon application is started from local notification
+  private var openFromNotificationClosure: ((UNUserNotificationCenter, UNNotificationResponse, ()->()) -> ())?
  
   /// Asks the user to permit push notifications (if not already permitted)
   public func permit(opt: UNAuthorizationOptions = options, 
@@ -260,8 +262,19 @@ open class PushNotification: NSObject, UNUserNotificationCenterDelegate, DoesLog
     receiveClosure = closure
   }
   
+  // Defines closure to call upon application is started from local notification
+  public func onOpenApplicationFromNotification(closure: @escaping (UNUserNotificationCenter, UNNotificationResponse, ()->()) -> ()) {
+    openFromNotificationClosure = closure
+  }
+  /// UNUserNotificationCenter delegate handler
+  /// The method will be called on the delegate when the user responded to the notification by opening the application, dismissing the notification or choosing a UNNotificationAction. The delegate must be set before the application returns from application:didFinishLaunchingWithOptions:.
+  public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    log("have a openFromNotificationClosure? \(openFromNotificationClosure != nil)")
+    openFromNotificationClosure?(center,response,completionHandler)
+  }
+    
   public func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-    return completionHandler(UNNotificationPresentationOptions.alert)
+    completionHandler(UNNotificationPresentationOptions.alert)
   }
   
   /// Register device token
@@ -392,6 +405,11 @@ open class NotifiedDelegate: UIResponder, UIApplicationDelegate,
   public func onReceivePush(closure: @escaping (PushNotification,
     PushNotification.Payload, FetchCompletionHandler?)->()) {
     notifier.onReceive(closure: closure)
+  }
+  
+  /// Call closure when a push notification has been received
+  public func onOpenApplicationFromNotification(closure: @escaping (UNUserNotificationCenter, UNNotificationResponse, ()->()) -> ()) {
+    notifier.onOpenApplicationFromNotification(closure: closure)
   }
   
   /// Set up singleton

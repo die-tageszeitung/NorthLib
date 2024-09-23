@@ -10,7 +10,9 @@ import Foundation
 import UserNotifications
 
 open class LocalNotifications: DoesLog {
-  //Helper to trigger local Notification if App is in Background
+  
+  ///Helper to trigger local Notification if App is in Background
+  ///use payload to add custom data
   public static func notify(title:String? = nil,
                             subtitle:String? = nil,
                             message:String,
@@ -19,6 +21,7 @@ open class LocalNotifications: DoesLog {
                             attachmentURL: URL? = nil,
                             categoryIdentifier: String? = nil,
                             notificationIdentifier: String? = nil,
+                            payload: [AnyHashable : Any]? = nil,
                             delay: TimeInterval = 5.0
 
   ){
@@ -30,6 +33,8 @@ open class LocalNotifications: DoesLog {
     if let subtitle = subtitle { content.subtitle = subtitle }
     content.body = message
     content.sound = sound
+    if let payload = payload { content.userInfo = payload }
+  
     if let attachmentURL = attachmentURL {
       do {
         let attachment = try UNNotificationAttachment(identifier: "\(identifier)-ai", url: attachmentURL)
