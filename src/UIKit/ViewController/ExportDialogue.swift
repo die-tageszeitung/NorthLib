@@ -78,7 +78,7 @@ open class ExportDialogue<T>: NSObject, UIActivityItemSource {
   
   /// Create export dialogue
   public func present(item: T, altText: String?, onlineLink: String?, view: UIView? = nil,
-                      subject: String? = nil, image: UIImage? = nil) {
+                      subject: String? = nil, image: UIImage? = nil, additionalOption: UIActivity? = nil) {
     let customItem = OpenInSafari(title: "In Safari öffnen",
                                   image: UIImage(systemName: "safari")  ) { sharedItems in
       guard let url = sharedItems[0] as? URL else { return }
@@ -89,7 +89,15 @@ open class ExportDialogue<T>: NSObject, UIActivityItemSource {
     self.onlineLink = onlineLink
     self.subject = subject
     self.image = image
-    let additionalItems = onlineLink != nil ? [customItem] : []
+    var additionalItems:[UIActivity] = []
+    
+    if onlineLink != nil {
+      additionalItems.append(customItem)
+    }
+    if let additionalOption = additionalOption {
+      additionalItems.append(additionalOption)
+    }
+//    additionalItems.append(UIActivity(.sha))
     let aController = UIActivityViewController(activityItems: [self],
       applicationActivities: additionalItems)
     aController.presentAt(view)
@@ -102,10 +110,25 @@ open class ExportDialogue<T>: NSObject, UIActivityItemSource {
 
 } // ExportDialogue
 
-fileprivate class OpenInSafari: UIActivity {
+fileprivate class OpenInSafari: CustomUIActivity {
   
   static var OpenInSafariActivity:UIActivity.ActivityType = UIActivity.ActivityType(rawValue: "de.taz.open.in.safari")
   
+  public override var activityType: UIActivity.ActivityType {
+    return OpenInSafari.OpenInSafariActivity
+  }
+}
+
+class SharePdfActivity: CustomUIActivity {
+  
+  static var OpenInSafariActivity:UIActivity.ActivityType = UIActivity.ActivityType(rawValue: "de.taz.share.pdf")
+  
+  public override var activityType: UIActivity.ActivityType {
+    return OpenInSafari.OpenInSafariActivity
+  }
+}
+
+public class CustomUIActivity: UIActivity {
   var _activityTitle: String
   var _activityImage: UIImage?
   var activityItems = [Any]()
@@ -117,27 +140,24 @@ fileprivate class OpenInSafari: UIActivity {
     action = performAction
     super.init()
   }
-  override var activityTitle: String? {
+  public override var activityTitle: String? {
     return _activityTitle
   }
   
-  override var activityImage: UIImage? {
+  public override var activityImage: UIImage? {
     return _activityImage
   }
-  override var activityType: UIActivity.ActivityType {
-    return OpenInSafari.OpenInSafariActivity
-  }
   
-  override class var activityCategory: UIActivity.Category {
+  public override class var activityCategory: UIActivity.Category {
     return .action
   }
-  override func canPerform(withActivityItems activityItems: [Any]) -> Bool {
+  public override func canPerform(withActivityItems activityItems: [Any]) -> Bool {
     return true
   }
-  override func prepare(withActivityItems activityItems: [Any]) {
+  public override func prepare(withActivityItems activityItems: [Any]) {
     self.activityItems = activityItems
   }
-  override func perform() {
+  public override func perform() {
     action(activityItems)
     activityDidFinish(true)
   }
