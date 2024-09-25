@@ -424,10 +424,7 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// Passes the WebView's content as PDF to the given closure
   @available(iOS 14.0, *)
   public func pdf(closure: @escaping (Data?)->()) {
-//    let config = WKPDFConfiguration()
-    // A4 (595.28 x 841.89)
-//    config.rect = CGRect(x: -50, y: -50, width: 595, height: 841)
-    createPDF() { res in closure(res.value()) }
+    createPDF { res in closure(res.value()) }
   }
   
   private func nav2a(webView: WKWebView, nav: WKNavigationAction) -> String {
@@ -798,48 +795,4 @@ open class ButtonedWebView: UIView {
   public override func layoutSubviews() {
     adaptLayoutConstraints()
   }
-}
-
-
-extension WebView {
-  // Methode zum Erzeugen des PDFs
-      public func createPDFData(completion: @escaping (Data?) -> Void) {
-          let printFormatter = self.viewPrintFormatter()
-          let renderer = UIPrintPageRenderer()
-
-          // Seitenränder festlegen (A4 Größe)
-          let pageSize = CGSize(width: 595.2, height: 841.8) // A4 Größe in Punkten (72 DPI)
-          let margin: CGFloat = 20.0
-
-          renderer.setValue(NSValue(cgRect: CGRect(x: 0, y: 0, width: pageSize.width, height: pageSize.height)), forKey: "paperRect")
-          renderer.setValue(NSValue(cgRect: CGRect(x: margin, y: margin, width: pageSize.width - margin * 2, height: pageSize.height - margin * 2)), forKey: "printableRect")
-
-          renderer.addPrintFormatter(printFormatter, startingAtPageAt: 0)
-
-          let pdfData = NSMutableData()
-
-          // PDF-Kontext erstellen
-          UIGraphicsBeginPDFContextToData(pdfData, CGRect.zero, nil)
-          for i in 0..<renderer.numberOfPages {
-              UIGraphicsBeginPDFPage()
-              let bounds = UIGraphicsGetPDFContextBounds()
-              renderer.drawPage(at: i, in: bounds)
-          }
-          UIGraphicsEndPDFContext()
-
-          completion(pdfData as Data)
-      }
-
-      // PDF-Druckfunktion
-  public func printPDF(pdfData: Data) {
-          let printController = UIPrintInteractionController.shared
-          let printInfo = UIPrintInfo(dictionary: nil)
-          printInfo.outputType = .general
-          printInfo.jobName = "WebView PDF Print"
-          printController.printInfo = printInfo
-
-          printController.printingItem = pdfData
-
-          printController.present(animated: true, completionHandler: nil)
-      }
 }
