@@ -45,7 +45,7 @@ open class ExportDialogue<T>: NSObject, UIActivityItemSource {
       metadata.originalURL = URL(fileURLWithPath: altText)
     }
     else {
-      metadata.originalURL = URL(string: "Dokument teilen")
+      metadata.originalURL = URL(string: "Dokument:teilen")
     }
     
     return metadata
