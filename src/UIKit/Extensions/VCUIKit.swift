@@ -200,7 +200,7 @@ public extension UIViewController {
    Present a view controller at a certain view or at the view of the top level 
    view controller
    */
-  func presentAt(_ view: UIView? = nil) {
+  func presentAt(_ view: UIView? = nil, completion: (() -> Void)? = nil) {
     var v: UIView
     var vc: UIViewController
     var rect: CGRect
@@ -217,7 +217,7 @@ public extension UIViewController {
     }
     self.popoverPresentationController?.sourceView = v
     self.popoverPresentationController?.sourceRect = rect
-    vc.present(self, animated: true, completion: nil)
+    vc.present(self, animated: true, completion: completion)
   }
   
 } // extension UIViewController

@@ -30,38 +30,44 @@ open class Alert {
   public static var sharedAlertTintColor:UIColor?
   
   /// Popup message to user
+  @discardableResult
   public static func message(title: String? = nil,
                              message: String,
                              presentationController: UIViewController? = nil,
+                             buttonTitle: String? = nil,
                              closure: (()->())? = nil
-                             ) {
-    self.message(title: title,
+                             ) -> AlertController {
+    return self.message(title: title,
                  message: message,
                  additionalActions: nil,
                  presentationController: presentationController,
+                 buttonTitle:buttonTitle,
                  closure: closure)
   }
   
+  @discardableResult
   public static func message(title: String? = nil,
                              message: String,
                              additionalActions : [UIAlertAction]? = nil,
                              presentationController: UIViewController? = nil,
-                             closure: (()->())? = nil) {
+                             buttonTitle: String? = nil,
+                             closure: (()->())? = nil) -> AlertController {
     var actions = additionalActions ?? []
-    let okButton = UIAlertAction(title: "OK", style: .cancel) { _ in closure?() }
+    let okButton = UIAlertAction(title: buttonTitle ?? "OK", style: .cancel) { _ in closure?() }
     actions.append(okButton)
-    self.message(title: title,
+    return self.message(title: title,
                  message: message,
                  actions: actions,
                  presentationController: presentationController)
   }
   
+  @discardableResult
   public static func message(title: String? = nil,
                              message: String,
                              actions : [UIAlertAction],
-                             presentationController: UIViewController? = nil) {
+                             presentationController: UIViewController? = nil) -> AlertController {
+    let alert = AlertController(title: title, message: message, preferredStyle: .alert)
     onMain {
-      let alert = AlertController(title: title, message: message, preferredStyle: .alert)
       for action in actions {
         alert.addAction(action)
       }
@@ -82,6 +88,7 @@ open class Alert {
         }
       })
     }
+    return alert
   }
   
   /// Ask the user for confirmation (as action sheet)
