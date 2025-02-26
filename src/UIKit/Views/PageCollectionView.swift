@@ -164,6 +164,11 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     didSet { if preventInit == false {initialize()}}
   }
   
+  open override func didMoveToWindow() {
+    super.didMoveToWindow()
+    initialize()
+  }
+  
   fileprivate var _index: Int?
   fileprivate var isInitialized = false
   fileprivate var initialIndex: Int? = nil
@@ -171,8 +176,12 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   
   // initialize with initialIndex when scroll view is ready
   fileprivate func initialize() {
-    if preventInit { return }
-    guard let layout = self.collectionViewLayout as? UICollectionViewFlowLayout 
+    if preventInit || self.window == nil { return }
+    if self.bounds.width != self.window?.frame.size.width ?? -1 {
+      ///ensure that the collection view is layouted correctly
+      self.doLayout()
+    }
+    guard let layout = self.collectionViewLayout as? UICollectionViewFlowLayout
       else { return }
     if !isInitialized {
       layout.minimumLineSpacing = swidth
