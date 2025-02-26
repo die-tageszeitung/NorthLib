@@ -419,6 +419,8 @@ open class MyButtonSlider:ButtonSlider{
 open class ButtonSlider: Slider {
   private var buttonMovedOut:Bool = false
   
+  public var closedBottonImageOffsetX: CGFloat = 0 { didSet { resetConstraints() } }
+  
   /// Maximum absolute coverage of the active view controller
   public var maxCoverage: CGFloat? = nil {
     didSet { evaluateCoverage() }
@@ -465,11 +467,14 @@ open class ButtonSlider: Slider {
     super.resetConstraints()
     topButtonConstraint.constant = topInset
     if let img = image {
-      widthButtonConstraint.constant = img.size.width
+      widthButtonConstraint.constant = img.size.width - closedBottonImageOffsetX
       heightButtonConstraint.constant = img.size.height
     }
     if fromLeft {
-      if buttonMovedOut == false { leadingButtonConstraint.constant = -shift}
+      if buttonMovedOut == false {
+        leadingButtonConstraint.constant
+        = -shift + closedBottonImageOffsetX
+      }
       leadingButtonConstraint.isActive = true
       trailingButtonConstraint.isActive = false
     }
