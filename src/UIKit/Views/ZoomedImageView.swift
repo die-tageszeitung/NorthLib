@@ -391,6 +391,11 @@ extension ZoomedImageView{
     }
   }
   
+  func doUpdateMinimumZoomScale(){
+    updateMinimumZoomScale()
+    zoomOutAndCenter()
+  }
+  
   // MARK: updateMinimumZoomScale
   fileprivate func updateMinimumZoomScale(){
     let widthScale = self.bounds.size.width / (imageView.image?.size.width ?? 1)

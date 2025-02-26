@@ -205,6 +205,9 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     let idx: Int? = oidx ?? _index
     if let idx = idx,
        let cell = cellForItem(at: IndexPath(item: idx, section: 0)) as? PageCell {
+      if let ziv = cell.page as? ZoomedImageView {
+        ziv.doUpdateMinimumZoomScale()
+      }
       return cell.page
     }
     else { return nil }
