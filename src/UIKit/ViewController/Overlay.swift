@@ -154,12 +154,12 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       self.overlayVC.view.pinSize(overlaySize)
       
     }
+    activeVC.addChild(overlayVC)
     overlayView.addSubview(contentView!)
     pin(contentView!, to: overlayView)
     if overlaySize == nil {
       overlayVC.view.frame = activeVC.view.frame
     }
-    overlayVC.willMove(toParent: activeVC)
     activeVC.view.addSubview(overlayView)
     //ToDo to/toSafe/frame.....
     //the ChildOverlayVC likes frame no autolayout
@@ -179,7 +179,6 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       pin(overlayView.bottom, to: activeVC.view.bottom, dist: -offset)
     }
     
-    activeVC.addChild(overlayVC)
     overlayVC.didMove(toParent: activeVC)
     
     if let ct = overlayVC as? OverlayChildViewTransfer {
