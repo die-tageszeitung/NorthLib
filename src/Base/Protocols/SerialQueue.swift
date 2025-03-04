@@ -13,7 +13,8 @@ public protocol SerialQueue {
   /// Queue label
   var label: String { get set }
   /// Put closure on a serial queue
-  func queue(closure: @escaping ()->())
+  @discardableResult 
+  func queue<Type>(closure: @escaping ()->Type)->Type
   /// Initialize with queue name
   init(label: String)
 }
@@ -21,7 +22,8 @@ public protocol SerialQueue {
 extension SerialQueue {
   /// Since Swifts standard library doesn't support serial queues, we simply
   /// call the closure.
-  public func queue(closure: ()->()) {
-    closure()
+  @discardableResult
+  public func queue<Type>(closure: ()->Type) -> Type {
+    return closure()
   }
 }

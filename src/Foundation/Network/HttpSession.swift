@@ -66,7 +66,7 @@ public enum HttpError: LocalizedError {
 }
 
 
-extension URLRequest: ToString {
+extension URLRequest: @retroactive ToString {
   
   /// Access request specific HTTP headers
   public subscript(hdr: String) -> String? {
@@ -210,7 +210,8 @@ extension URLSessionTask {
  Each HTTP request is performed using a HttpJob object, that is an encapsulation
  of an URLSessionTask.
  */
-open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, URLSessionDownloadDelegate, URLSessionDataDelegate, DoesLog {
+open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, URLSessionDownloadDelegate, 
+                        URLSessionDataDelegate, DoesLog {
   
   /// Perform debug logging?
   public static var isDebug: Bool = true
@@ -218,10 +219,8 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   
   public var isDownloading: Bool { return !jobs.isEmpty }
 
-  /// Dictionary of background completion handlers 
-  public static var bgCompletionHandlers: [String:()->()] = [:]  
   // Optional name of (background) session
-  fileprivate var name: String  
+  public var name: String  
   // HTTP header to send with HTTP request
   public var header: [String:String] = [:]  
   
@@ -311,6 +310,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   
   /// Close a job with given task ID
   public func closeJob(cid: String, error: Error? = nil, fileReceived: URL? = nil) {
+    guard !isBackground else { return }
     var job: HttpJob?
     syncQueue.sync {[weak self] in
       job = self?.jobs[cid]
@@ -329,7 +329,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     if isBackground {
       config.networkServiceType = .background
       config.isDiscretionary = true
-      config.sessionSendsLaunchEvents = false
+      config.sessionSendsLaunchEvents = true
     }
     else {
       config.networkServiceType = .responsiveData
@@ -389,11 +389,6 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     _session?.invalidateAndCancel()
     _session = nil
     _config = nil
-  }
-  
-  // Factory method producing a background session
-  static public func background(_ name: String) -> HttpSession {
-    return HttpSession(name: name, isBackground: true)
   }
   
   // produce URLRequest from URL url
@@ -552,16 +547,6 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     _session = nil//should prevent: Task created in a session that has been invalidated
   }
   
-  // Background processing complete - call background completion handler
-  public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    log("Background session '\(name)' finished")
-    if let closure = HttpSession.bgCompletionHandlers[name] {
-      // completion handler must be called on main queue
-      DispatchQueue.main.async { closure() }
-      HttpSession.bgCompletionHandlers[name] = nil
-    }
-  }
-  
   // Authentication info is requested
   public func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, 
       completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
@@ -624,8 +609,12 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     willBeginDelayedRequest request: URLRequest, 
     completionHandler: @escaping (URLSession.DelayedRequestDisposition, 
                                   URLRequest?) -> Void) {
-    let cid = task.cid
-    debug("Task \(cid): Delayed background task is ready to run")
+    if isBackground {
+      debug("Delayed background task is ready to run")
+    } else {
+      let cid = task.cid
+      debug("Task \(cid): Delayed background task is ready to run")
+    }
     completionHandler(.continueLoading, nil)
   }
   
@@ -638,10 +627,14 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   // Task metrics received
   public func urlSession(_ session: URLSession, task: URLSessionTask, 
                          didFinishCollecting metrics: URLSessionTaskMetrics) {
-    let cid = task.cid
     let sent = metrics.transactionMetrics[0].countOfRequestBodyBytesSent
     let received = metrics.transactionMetrics[0].countOfResponseBodyBytesReceived
-    debug("Task \(cid): Task metrics received - \(sent) bytes sent, \(received) bytes received")
+    if isBackground {
+      debug("Background download: Task metrics received - \(sent) bytes sent, \(received) bytes received")
+    } else {
+      let cid = task.cid
+      debug("Task \(cid): Task metrics received - \(sent) bytes sent, \(received) bytes received")
+    }
   }
   
   // MARK: - URLSessionDownloadDelegate Protocol

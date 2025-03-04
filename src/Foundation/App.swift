@@ -223,6 +223,27 @@ open class App {
     return _installationId!
   }
   
+  /// Returns an array of configured background modes (empty if not configured)
+  public static var backgroundModes: [String] {
+    if let bmodes = info["UIBackgroundModes"] as? [String] { return bmodes }
+    else { return [] }
+  }
+  
+  /// Returns true if the background fetch capability is enabled
+  public static var mayBackgroundFetch: Bool { 
+    return backgroundModes.contains("fetch")
+  }
+  
+  /// Returns true if the background processing capability is enabled
+  public static var mayBackgroundProcess: Bool {
+    return backgroundModes.contains("processing")
+  }
+  
+  /// Returns true if the background remote notification capability is enabled
+  public static var mayBackgroundNotification: Bool {
+    return backgroundModes.contains("remote-notification")
+  }
+ 
   public init() {}
   
 } // class App
