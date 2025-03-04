@@ -160,13 +160,15 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   
   public convenience init() { self.init(frame: CGRect()) }
   
+  var preventInitIfNotinViewHierarchy: Bool = false
+  
   var preventInit: Bool = false {
     didSet { if preventInit == false {initialize()}}
   }
   
   open override func didMoveToWindow() {
     super.didMoveToWindow()
-    initialize()
+    if preventInitIfNotinViewHierarchy { initialize() }
   }
   
   fileprivate var _index: Int?
@@ -176,7 +178,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   
   // initialize with initialIndex when scroll view is ready
   fileprivate func initialize() {
-    if preventInit || self.window == nil { return }
+    if preventInit || preventInitIfNotinViewHierarchy && self.window == nil { return }
     if self.bounds.width != self.window?.frame.size.width ?? -1 {
       ///ensure that the collection view is layouted correctly
       self.doLayout()

@@ -139,6 +139,7 @@ extension ImageCollectionVC {
 // MARK: - Helper
 extension ImageCollectionVC {
   func prepareCollectionView() {
+    self.collectionView?.preventInitIfNotinViewHierarchy = true
     self.collectionView?.backgroundColor = UIColor.black
     self.collectionView?.showsHorizontalScrollIndicator = false
     self.collectionView?.showsVerticalScrollIndicator = false
