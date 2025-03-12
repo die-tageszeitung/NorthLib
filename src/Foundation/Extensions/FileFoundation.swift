@@ -135,6 +135,10 @@ extension Dir {
     return Dir.appSupportPath.appending("/tmp-searchresults")
   }
   
+  public static var backgroundDownloadPath: String {
+    return Dir.appSupportPath.appending("/tmp-bgIssueDl")
+  }
+  
   /// returns the path to the home directory
   public static var homePath: String {
     return NSHomeDirectory()
@@ -168,6 +172,10 @@ extension Dir {
   /// returns the searchResults directory
   public static var searchResults: Dir {
     return Dir(Dir.searchResultsPath)
+  }
+  
+  public static var backgroundDownloads: Dir {
+    return Dir(Dir.backgroundDownloadPath)
   }
   
   /// returns a list of files in the inbox

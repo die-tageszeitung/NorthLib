@@ -356,8 +356,8 @@ open class BackgroundSession: HttpSession {
       catch { err = BgSessionError.unzipFailed(error.description) }
     }
     else {
-      let basename = File.basename(name)
-      let dest = "\(destPath!)/\(basename)"
+      let filename = url.lastPathComponent
+      let dest = "\(destPath!)/\(filename)"
       File(path).move(to: dest)
       log("Background download: file downloaded to \(dest)")
     }
