@@ -335,6 +335,8 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
       config.networkServiceType = .background
       config.isDiscretionary = true
       config.sessionSendsLaunchEvents = true
+      config.allowsCellularAccess = allowMobile
+#warning("TODO! BG DOWNLOAD TEST THE OTHER WAY AROUND")
       log("get config called and returned background config")
       return config
     }
