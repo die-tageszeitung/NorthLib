@@ -336,9 +336,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
       config.isDiscretionary = true
       config.sessionSendsLaunchEvents = true
       config.allowsCellularAccess = allowMobile
-#warning("TODO! BG DOWNLOAD TEST THE OTHER WAY AROUND")
-      log("get config called and returned background config")
-      return config
+      log("get config called for background")
     }
     else {
       config.networkServiceType = .responsiveData
@@ -362,7 +360,6 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     config.timeoutIntervalForResource = 40.0
     config.allowsCellularAccess = allowMobile
     config.waitsForConnectivity = waitForAvailability
-    log("get config called and returned foreground config")
     return config
   }
   
