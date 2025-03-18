@@ -182,7 +182,11 @@ open class BackgroundSession: HttpSession {
   // Remove session data from user defaults and remove session from bgSessions dictionary
   fileprivate func removeUserDefaults() {
     if var sess = udef.dictionary(forKey: "BackgroundSessions") {
+      log("removed user defaults")
       sess[name] = nil
+    }
+    else {
+      log("cannot remove user defaults: not found")
     }
   }
   
@@ -337,7 +341,8 @@ open class BackgroundSession: HttpSession {
     
   // Do some cleanup: remove user default values and remove session from bgSessions
   fileprivate func cleanup(_ err: Error? = nil) {
-    removeUserDefaults()  
+    removeUserDefaults()
+    log("\(name) session count: \(BackgroundSession.bgSessions.count)")
     BackgroundSession.bgSessions[name] = nil
     if let err { error("Background download failed: \(err)") }
     callback(err)
