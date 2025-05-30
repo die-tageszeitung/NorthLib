@@ -443,7 +443,7 @@ open class File: ToString, DoesLog {
     if isOverwrite {
       let dest = File(to)
       if dest.exists {
-        debug("overwriting: \(to)")
+        debug("overwriting: \(to) Matching Filesize: \(dest.size == self.size)")
         dest.remove()
       }
     }
