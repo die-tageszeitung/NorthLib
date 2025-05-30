@@ -110,4 +110,13 @@ public extension TimeInterval {
     formater.allowedUnits = [.minute, .second]
     return formater.string(from: self)
   }
+  
+  /// Converts the TimeInterval into a human-readable string using `DateComponentsFormatter`.
+  var readable: String {
+    let formatter = DateComponentsFormatter()
+    formatter.unitsStyle = .abbreviated // Use short units like "h", "m", "s"
+    formatter.allowedUnits = [.day, .hour, .minute, .second] // Customize units as needed
+    formatter.zeroFormattingBehavior = .dropAll // Drop zero values
+    return formatter.string(from: self) ?? "0s"
+  }
 }
