@@ -287,7 +287,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   public func createJob(task: URLSessionTask, filename: String? = nil,
                         closure: @escaping(HttpJob)->()) {
     let job = HttpJob(task: task, filename: filename, closure: closure)
-//    debug("New HTTP Job \(job.cid) created: \(job.url ?? "[undefined URL]")")
+    debug("New HTTP Job \(job.cid) created: \(job.url ?? "[undefined URL]")")
     syncQueue.sync { [weak self] in
       guard let self = self else { return }
       //crash: simulator 16.6. +2
@@ -325,23 +325,27 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     let config = isBackground ? 
       URLSessionConfiguration.background(withIdentifier: name) : 
       URLSessionConfiguration.default
+    log("get config called for session with name: \(name)")
     if isBackground {
       config.networkServiceType = .background
-      config.isDiscretionary = true
+      config.isDiscretionary = false
       config.sessionSendsLaunchEvents = true
+      config.waitsForConnectivity = true //No Timeout!
       config.allowsCellularAccess = allowMobile
       debug("get config called for background")
     }
     else {
       config.networkServiceType = .responsiveData
       config.isDiscretionary = false
+      config.waitsForConnectivity = false
+      config.timeoutIntervalForRequest = 20.0
+      config.timeoutIntervalForResource = 40.0
     }
     config.httpCookieStorage = HTTPCookieStorage.shared
     config.httpCookieAcceptPolicy = .onlyFromMainDocumentDomain
     config.httpShouldSetCookies = true
     config.urlCredentialStorage = URLCredentialStorage.shared
     config.httpAdditionalHeaders = [:]
-    config.waitsForConnectivity = false
     if isCache {
       config.urlCache = URLCache.shared
       config.requestCachePolicy = .useProtocolCachePolicy
@@ -350,8 +354,6 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
       config.urlCache = nil
       config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
     }
-    config.timeoutIntervalForRequest = 20.0
-    config.timeoutIntervalForResource = 40.0
     config.allowsCellularAccess = allowMobile
     config.waitsForConnectivity = waitForAvailability
     return config
@@ -544,7 +546,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   // Is called when all tasks are finished or cancelled
   public func urlSession(_ session: URLSession, didBecomeInvalidWithError error: Error?) {
     logIf(error)
-    debug("Warning: Session finished or cancelled")
+    log("Warning: Session finished or cancelled")
     _session = nil//should prevent: Task created in a session that has been invalidated
   }
   
@@ -642,12 +644,8 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   
   // Download has been finished
   public func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-    debug("Task DdidFinishDownloadingTo...")
     var err: Error? = nil
     let cid = downloadTask.cid
-//    if self.isBackground {
-//      closeJob(cid: <#T##String#>)
-//    }
     if let job = job(cid) {
       if let resp = job.response {
         let statusCode = resp.statusCode
@@ -706,12 +704,11 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, 
     didReceive response: URLResponse, completionHandler: 
     @escaping (URLSession.ResponseDisposition) -> Void) {
-    debug("Task didReceive response")
     let cid = dataTask.cid
     guard let job = job(cid) else {
-      debug("Task didReceive response job NOT found")
+      #warning("IS THIS REQUIRED FOR BG DOWNLOAD??? TEST WITH DISABLED FOR BG DL")
+//      completionHandler(.allow)
       return }
-    debug("Task didReceive response job found")
     var err: Error?
     if let response = response as? HTTPURLResponse {
       debug("Task \(cid): Initial reply from server received: \(response.statusCode)")
@@ -719,17 +716,11 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
         if let mtype = job.expectedMimeType, mtype != response.mimeType {
           err = HttpError.unexpectedMimeType(response.mimeType ?? "[undefined]")
         }
-        else {
-          debug("completionHandler allow")
-          completionHandler(.allow); return
-        }
+        else { completionHandler(.allow); return }
       }
       else { err = HttpError.serverError(response.statusCode) }
       completionHandler(.cancel)
       closeJob(cid: cid, error: err)
-    }
-    else {
-      debug("Task \(cid): Initial reply from server received: unknown response")
     }
   }
   
