@@ -141,8 +141,6 @@ open class BackgroundSession: HttpSession {
   public private(set) var url: String
   /// Directory to write download to
   public private(set) var destPath: String?
-  /// Directory to move files
-  public private(set) var moveFiles: [String:String]?
   /// Should a zip-file be extracted (zip is removed after extraction)
   public private(set) var isUnzip: Bool = false
   // The download task
@@ -182,7 +180,6 @@ open class BackgroundSession: HttpSession {
     var pdata: [String:Any] = [:]
     pdata["url"] = url
     pdata["destPath"] = destPath
-    pdata["moveFiles"] = moveFiles
     pdata["isUnzip"] = isUnzip
     var sessions: [String:Any] = [:]
     if let sess = UserDefaults().backgroundSessions {
@@ -197,12 +194,10 @@ open class BackgroundSession: HttpSession {
     if let sess = UserDefaults().backgroundSessions,
        let pdata = sess[name] as? [String:Any] {
       if let destPath = pdata["destPath"] as? String,
-         let moveFiles = pdata["moveFiles"] as? [String:String],
          let url = pdata["url"] as? String,
          let isUnzip = pdata["isUnzip"] as? Bool {
         let bgs = BackgroundSession(url, name: name, isBackground: isBackground)
         bgs.destPath = destPath
-        bgs.moveFiles = moveFiles
         bgs.isUnzip = isUnzip
         return bgs
       }
@@ -458,7 +453,6 @@ open class BackgroundSession: HttpSession {
   /// The directory _toDir_ must exist, otherwise the closure passed to the
   /// initializer is called with an Error value. If the file to download
   /// already exists at _toDir_ it will be overwritten.
-  /// If moveFiles is given for zip Download
   /// - Parameters:
   ///   - toDir: path to directory for storing the download
   public func download(toDir: String) {
@@ -482,10 +476,8 @@ open class BackgroundSession: HttpSession {
   /// already exist at _toDir_ they will be overwritten.
   ///
   /// - Parameter toDir: path to directory for unpacking the download to
-  ///   - moveFiles: Dictionary of [from:to] deleeting source folder after move
-  public func downloadZip(toDir: String, moveFilesRealtion: [String:String]? = nil) {
+  public func downloadZip(toDir: String) {
     isUnzip = true
-    moveFiles = moveFilesRealtion
     download(toDir: toDir)
   }
     
@@ -542,7 +534,6 @@ open class BackgroundSession: HttpSession {
       do {
         try zf.unpack(toDir: destPath!)
         log("Background download: zip file unpacked to \(destPath!)")
-        moveFilesIfNeeded()
       }
       catch { log("Background download: unzip failed: \(error)")}
     }
@@ -552,36 +543,6 @@ open class BackgroundSession: HttpSession {
       File(path).move(to: dest)
       log("Background download: file downloaded to \(dest)")
     }
-  }
-  
-  ///move files from subfolders to divverent places
-  fileprivate func moveFilesIfNeeded(){
-    var fileCount = 0
-    guard let dirs = moveFiles else { return }
-    guard let destPath = destPath else { return }
-    var dirsToRemove: [Dir] = []
-    for (source, targetPath) in dirs {
-      let fromDir = source == "." ? Dir(destPath) : Dir(destPath+"/"+source)
-      log("moveFiles: \(source) to: \(targetPath) fromDir: \(fromDir.path)")
-      guard fromDir.exists else { log("FromDir not exist"); continue}
-      let toDir
-      = targetPath == ".."
-      ? Dir(NSString(string: destPath).deletingLastPathComponent)
-      : Dir(targetPath)
-      guard toDir.exists else { log("toDir \(toDir.path) not exist"); continue}
-      ///move all files
-      for fileName in fromDir.contents() {
-        let file = File(dir: fromDir.path, fname: fileName)
-        debug("exists: \(file.exists) / move file from: \(file.path)")
-        debug("to: \(toDir.path.appending("/\(fileName)"))")
-        file.move(to: toDir.path.appending("/\(fileName)"))
-        fileCount += 1
-      }
-      dirsToRemove.append(fromDir)
-    }
-    ///delete source folders
-    for dir in dirsToRemove { dir.remove() }
-    log("moved \(fileCount) files to targets and removed source folders")
   }
   
   // Background download failed
