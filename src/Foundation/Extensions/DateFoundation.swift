@@ -40,15 +40,25 @@ public extension Date {
     self = Calendar.current.date(byAdding: .day, value: days, to: self)!
   }
   
+  /// Returns the start of the day for the current date in the current calendar.
   var startOfDay: Date {
-          return Calendar.current.startOfDay(for: self)
-      }
+      return Calendar.current.startOfDay(for: self)
+  }
 
   var endOfDay: Date? {
     var components = DateComponents()
     components.day = 1
     components.second = -1
     return Calendar.current.date(byAdding: components, to: startOfDay)
+  }
+  
+  /// The number of seconds that have passed since the start of the day.
+  var secondsSinceStartOfDay: TimeInterval {
+      return timeIntervalSince(Calendar.current.startOfDay(for: self))
+  }
+  
+  func addingHours(_ hours: Int) -> Date {
+      return self.addingTimeInterval(TimeInterval(hours * 3600))
   }
   
   var startOfMonth: Date? {
