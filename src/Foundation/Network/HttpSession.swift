@@ -330,17 +330,15 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
       config.networkServiceType = .background
       config.isDiscretionary = false
       config.sessionSendsLaunchEvents = true
-      config.waitsForConnectivity = true //No Timeout!
-      config.allowsCellularAccess = allowMobile
       debug("get config called for background")
     }
     else {
       config.networkServiceType = .responsiveData
       config.isDiscretionary = false
-      config.waitsForConnectivity = false
       config.timeoutIntervalForRequest = 20.0
       config.timeoutIntervalForResource = 40.0
     }
+    
     config.httpCookieStorage = HTTPCookieStorage.shared
     config.httpCookieAcceptPolicy = .onlyFromMainDocumentDomain
     config.httpShouldSetCookies = true
