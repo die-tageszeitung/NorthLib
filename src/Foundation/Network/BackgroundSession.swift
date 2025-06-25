@@ -407,7 +407,7 @@ open class BackgroundSession: HttpSession {
   }
   
   public static func restartAllPendingDownloads() {
-    Log.log("🎲 Restarting all pending downloads! ")
+    Log.log("🎲 Restarting all pending downloads! bgSession Count: \(bgSessions.count)")
       // Durchlaufe alle aktiven Sessions
     for (_, sess) in bgSessions {
       // Hole alle Tasks der Session
