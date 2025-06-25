@@ -225,11 +225,6 @@ public class ExtendedNetAvailability: DoesLog {
       return
     }
     
-    if force && OperationQueue.current?.underlyingQueue == nil {
-      log("prevent crash due netAvailability force recheck & creation")
-      return
-    }
-    
     if force || createNetAvailability()?.reachabilityFlags != netAvailability.lastFlags {
       self.netAvailability = createNetAvailability()
       _onChangeClosure?(self.netAvailability?.isAvailable ?? false)
