@@ -484,7 +484,8 @@ open class BackgroundSession: HttpSession {
   // Do some cleanup: remove user default values and remove session from bgSessions
   fileprivate func cleanup(_ err: Error? = nil) {
     removeUserDefaults()
-    log("Session: \(name) | total session count: \(BackgroundSession.bgSessions.count) err: \(String(describing: err))")
+    let errstring = String(describing: err)
+    log("Session: \(name) | total session count: \(BackgroundSession.bgSessions.count) err: \(String(describing: err) ?? err) ")
     BackgroundSession.bgSessions[name] = nil
     if let err { error("Background download failed for url: \(url) with error: \(err)") }
     callback(url, err)
@@ -547,7 +548,7 @@ open class BackgroundSession: HttpSession {
   
   // Background download failed
   fileprivate func downloadFinished(error err: Error? = nil) {
-    log("Download finished. Checking pending tasks...")
+    log("Download finished. Checking pending tasks... \(err == nil ? "" : "with ERROR")")
     session.getAllTasks {[weak self] tasks in
       let remainingTasks = tasks.filter { $0.state != .completed }
       self?.log("\(remainingTasks.count > 0 ? "⚠️WARNING!":"")...\(remainingTasks.count)/\(tasks.count) tasks remaining")
@@ -590,11 +591,7 @@ open class BackgroundSession: HttpSession {
         err = HttpError.serverError(statusCode)
       }
     }
-    downloadFinished(error: err)
-    ///sometimes delegate events came staggered; ensure session.getAllTasks really catch all tasks
-//    onThreadAfter(1.0) { [weak self] in
-//      self?.downloadFinished(error: err)
-//    }
+    downloadFinished(error: err ?? completionError)
   }
   
   // MARK: - URLSessionDownloadDelegate Protocol
