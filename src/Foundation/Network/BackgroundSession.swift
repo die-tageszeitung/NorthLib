@@ -403,63 +403,65 @@ open class BackgroundSession: HttpSession {
     }
   }
   
-  /// Checks whether there is an active download task for a given session URL.
-  ///
-  /// This method synchronously inspects the background session associated with the provided URL
-  /// to determine whether there are any active download tasks (i.e., running or completed).
-  /// Suspended tasks can optionally be cancelled. The inspection is limited to 2 seconds to avoid blocking.
+  /// Checks if there are active or completed downloads for the given session URL,
+  /// and optionally cancels suspended or active tasks. Returns `true` only if
+  /// active/completed tasks are found **and not cancelled** (i.e., `cancelActiveDownloads == false`).
   ///
   /// - Parameters:
-  ///   - sessionWithUrl: The URL identifying the background session to check.
-  ///   - cancelIfSuspended: If true, any suspended download tasks will be cancelled. Defaults to true.
+  ///   - sessionWithUrl: The session URL to check for.
+  ///   - cancelIfSuspended: If true, any suspended tasks will be cancelled. Default is true.
+  ///   - cancelActiveDownloads: If true, running or completed tasks will be cancelled. If false, such tasks cause this method to return `true`.
   ///
-  /// - Returns: `true` if there is a running or completed download task for the session; otherwise, `false`.
-  public static func hasActiveDownload(for sessionWithUrl: String, cancelIfSuspended: Bool = true) -> Bool {
-      Log.log("Look for active Downloads for url: \(sessionWithUrl) \(cancelIfSuspended ? " and CANCEL IF SUSPENDED" :"")")
-      
-      for (_, sess) in bgSessions {
-          guard sess.url == sessionWithUrl else { continue }
-          Log.log("...session found!")
-          
-          var foundActive = false
-          let semaphore = DispatchSemaphore(value: 0)
-          
-          sess.session.getAllTasks { tasks in
-              Log.log("...\(tasks.count) tasks found")
-              
-              for task in tasks {
-                  guard task is URLSessionDownloadTask else { continue }
-                  
-                  if task.state == .running || task.state == .completed {
-                      foundActive = true
-                      break
-                  }
-                  
-                  if cancelIfSuspended {
-                      Log.log("Suspended task found – cancelling")
-                      task.cancel()
-                  }
+  /// - Returns: `true` if an active or completed task was found **and not cancelled**; otherwise, `false`.
+  public static func hasActiveDownload(
+    for sessionWithUrl: String,
+    cancelIfSuspended: Bool = true,
+    cancelActiveDownloads: Bool
+  ) -> Bool {
+    Log.log("Look for active Downloads for url: \(sessionWithUrl) \(cancelIfSuspended ? "and CANCEL IF SUSPENDED" : "") \(cancelActiveDownloads ? "and CANCEL ACTIVE Downloads" : "")")
+    
+    for (name, sess) in bgSessions {
+      guard sess.url == sessionWithUrl else { continue }
+      Log.log("...session found!")
+      var foundActive = false
+      let semaphore = DispatchSemaphore(value: 0)
+      sess.session.getAllTasks { tasks in
+        Log.log("...\(tasks.count) tasks found")
+        for task in tasks {
+          guard task is URLSessionDownloadTask else { continue }
+          switch task.state {
+            case .running, .completed:
+              if cancelActiveDownloads {
+                Log.log("Active/completed task found – cancelling")
+                task.cancel()
+              } else {
+                foundActive = true
               }
-              
-              if !foundActive {
-                  sess.invalidate()
+            case .suspended:
+              if cancelIfSuspended {
+                Log.log("Suspended task found – cancelling")
+                task.cancel()
               }
-              
-              semaphore.signal()
+            default:
+              break
           }
-          
-          // Wait up to 2 seconds for the tasks to be evaluated
-          let timeoutResult = semaphore.wait(timeout: .now() + 2.0)
-          
-          if timeoutResult == .timedOut {
-              Log.log("Timeout: task inspection took too long")
-              return false
-          }
-          
-          return foundActive
+        }
+        if !foundActive {
+          Log.log("remove session")
+          sess.invalidate()
+          sess.removeUserDefaults()
+          BackgroundSession.bgSessions[name] = nil
+        }
+        semaphore.signal()
       }
-      
-      return false
+      let timeoutResult = semaphore.wait(timeout: .now() + 2.0)
+      if timeoutResult == .timedOut {
+        Log.log("Timeout: task inspection took too long")
+        return false
+      }
+      return foundActive
+    }
+    return false
   }
   
   public static func restartAllPendingDownloads() {
