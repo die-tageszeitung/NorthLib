@@ -385,25 +385,81 @@ open class BackgroundSession: HttpSession {
         let request = URLRequest(url: url)
         let task = bgsession.session.downloadTask(with: request)
         task.resume()
-//        bgsession.log("WARNING DO NOT CALL dlCallback here...")
-//        callback(bgsession.url, nil)
       }
     }
     return bgsession
   }
   
   public static func restartAllArchivedDownloads(callback: @escaping (String, Error?)->()) throws {
-    #warning("There is something missing found 0 Tasks to resume")
     if let sessions = UserDefaults().backgroundSessions {
       Log.log("Restarting \(sessions.count) sessions.")
       for (name, sess) in sessions {
         if let s = sess as? [String:Any], let surl = s["url"] as? String {
           try Self.resumeBackgroundURLSession(name: name, completionHandler: {
-            Log.log("Background download resume finished for \(name)")
+            Log.log("Background download resume finished for \(name) url: \(surl)")
           }, callback: callback)
         }
       }
     }
+  }
+  
+  /// Checks whether there is an active download task for a given session URL.
+  ///
+  /// This method synchronously inspects the background session associated with the provided URL
+  /// to determine whether there are any active download tasks (i.e., running or completed).
+  /// Suspended tasks can optionally be cancelled. The inspection is limited to 2 seconds to avoid blocking.
+  ///
+  /// - Parameters:
+  ///   - sessionWithUrl: The URL identifying the background session to check.
+  ///   - cancelIfSuspended: If true, any suspended download tasks will be cancelled. Defaults to true.
+  ///
+  /// - Returns: `true` if there is a running or completed download task for the session; otherwise, `false`.
+  public static func hasActiveDownload(for sessionWithUrl: String, cancelIfSuspended: Bool = true) -> Bool {
+      Log.log("Look for active Downloads for url: \(sessionWithUrl) \(cancelIfSuspended ? " and CANCEL IF SUSPENDED" :"")")
+      
+      for (_, sess) in bgSessions {
+          guard sess.url == sessionWithUrl else { continue }
+          Log.log("...session found!")
+          
+          var foundActive = false
+          let semaphore = DispatchSemaphore(value: 0)
+          
+          sess.session.getAllTasks { tasks in
+              Log.log("...\(tasks.count) tasks found")
+              
+              for task in tasks {
+                  guard task is URLSessionDownloadTask else { continue }
+                  
+                  if task.state == .running || task.state == .completed {
+                      foundActive = true
+                      break
+                  }
+                  
+                  if cancelIfSuspended {
+                      Log.log("Suspended task found – cancelling")
+                      task.cancel()
+                  }
+              }
+              
+              if !foundActive {
+                  sess.invalidate()
+              }
+              
+              semaphore.signal()
+          }
+          
+          // Wait up to 2 seconds for the tasks to be evaluated
+          let timeoutResult = semaphore.wait(timeout: .now() + 2.0)
+          
+          if timeoutResult == .timedOut {
+              Log.log("Timeout: task inspection took too long")
+              return false
+          }
+          
+          return foundActive
+      }
+      
+      return false
   }
   
   public static func restartAllPendingDownloads() {
@@ -484,8 +540,7 @@ open class BackgroundSession: HttpSession {
   // Do some cleanup: remove user default values and remove session from bgSessions
   fileprivate func cleanup(_ err: Error? = nil) {
     removeUserDefaults()
-    let errstring = String(describing: err)
-    log("Session: \(name) | total session count: \(BackgroundSession.bgSessions.count) err: \(String(describing: err) ?? err) ")
+    log("Session: \(name) | total session count: \(BackgroundSession.bgSessions.count) err: \(String(describing: err)) ")
     BackgroundSession.bgSessions[name] = nil
     if let err { error("Background download failed for url: \(url) with error: \(err)") }
     callback(url, err)
