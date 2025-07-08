@@ -199,7 +199,7 @@ open class KVStore {
   }
   
   // setIfUndefined sets a key/value pair if there is no previous definition
-  private func setIfUndefined(key: String, val: String, scope: String? = nil,
+  private func setIfUndefined(key: String, val: String?, scope: String? = nil,
                               isNotify: Bool = true) {
     let v = get(key: key, scope: scope)
     if v == nil { set(key: key, val: val, scope: scope, isNotify: isNotify) }
@@ -209,12 +209,12 @@ open class KVStore {
   /// with an optional scope
   public class Values {
     var scope: String?
-    var values: [String:String]
-    public init(scope: String?, values: [String:String]) {
+    var values: [String:String?]
+    public init(scope: String?, values: [String:String?]) {
       self.scope = scope
       self.values = values
     }
-    public convenience init(_ values: [String:String])
+    public convenience init(_ values: [String:String?])
       { self.init(scope: nil, values: values) }
   }
 
