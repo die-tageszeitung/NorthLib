@@ -281,11 +281,11 @@ open class PushNotification: NSObject, UNUserNotificationCenterDelegate, DoesLog
   func register(token: Data?) {
     if let token = token {
       deviceId = token.hex
-      debug("Push notifications accepted, deviceId: \(deviceId!)")
+      debug("✅ Push notifications accepted, deviceId: \(deviceId!)")
     }
     else {
       deviceId = nil
-      debug("User denied push notifications")
+      debug("❌ User denied push notifications")
     }
     if let closure = permissionClosure { onMain { closure(self) } }
   }
