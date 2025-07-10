@@ -550,6 +550,7 @@ open class BackgroundSession: HttpSession {
         log("Skip Invalid URL Download: \(sUrl)")
         continue
       }
+      log("Download \(sUrl)")
       let fileTask = session.downloadTask(with: rurl)///not used so can be overwritten
       fileTask.resume()
       enqueuedDownloadTasks += 1
