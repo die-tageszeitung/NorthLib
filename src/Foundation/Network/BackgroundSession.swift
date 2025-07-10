@@ -267,11 +267,11 @@ open class BackgroundSession: HttpSession {
   ///
   /// - Throws: `BgSessionError.alreadyInUse` if a session for the same URL is already in use
   ///
-  public convenience init(_ url: String, asBackgroundSession: Bool, callback: @escaping (String, Error?)->()) throws {
+  public convenience init(_ url: String, name: String? = nil, asBackgroundSession: Bool, callback: @escaping (String, Error?)->()) throws {
     if BackgroundSession.search(url: url) { throw BgSessionError.alreadyInUse(url) }
     ///do not use Background Session in Simulator it did not work!
     let background = Device.isSimulator ? false : asBackgroundSession
-    self.init(url, isBackground:background)
+    self.init(url, name: name, isBackground:background)
     self.callback = callback
   }
   
