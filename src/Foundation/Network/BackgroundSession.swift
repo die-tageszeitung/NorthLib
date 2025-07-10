@@ -131,17 +131,6 @@ open class BackgroundSession: HttpSession {
   /// Session number of _this_ session
   public private(set) var sessionNumber: Int
   
-  static let sharedBackgroundSession:HttpSession = {
-    let httpSession = HttpSession(name: "de.taz.sharedBackgroundSession", isBackground: true)
-    httpSession.config.httpMaximumConnectionsPerHost = 3
-    return httpSession
-  }()
-  
-  public override var session: URLSession {
-    log("get urlSession for \(isBackground ? "background" : "foreground") \(isBackground ? "reuse http session with name: \(Self.sharedBackgroundSession.name)" : "")")
-    return isBackground ? Self.sharedBackgroundSession.session : super.session
-  }
-  
   /// Dictionary of background sessions
   public private(set) static var bgSessions: [String:BackgroundSession] = [:]
   // The callback informing the caller about success/failure
