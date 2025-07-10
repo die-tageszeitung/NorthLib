@@ -518,49 +518,6 @@ open class BackgroundSession: HttpSession {
     persistUserDefaults()
     download()
   }
-  
-  public func download(files: [String], toDir: String) {
-    guard files.count > 0 else {
-      let err =
-      NSError(domain: "de.taz.northLib.BackgroundSession", code: 1, userInfo: [NSLocalizedDescriptionKey: "No files to download"])
-      callback(url, error(err))
-      return
-    }
-    
-    destPath = toDir
-    persistUserDefaults()
-    
-    guard let rurl = URL(string: url) else {
-      callback(url, error(HttpError.invalidURL(url)))
-      return
-    }
-    
-    guard Dir(destPath!).exists else {
-      callback(url, error(BgSessionError.noDirectory(destPath!)))
-      return
-    }
-    
-    var enqueuedDownloadTasks = 0
-    
-    log("Download: \(files) from \(url) to \(destPath!)")
-    
-    for fileName in files {
-      let sUrl = url + "/" + fileName
-      guard let furl = URL(string: sUrl) else {
-        log("Skip Invalid URL Download: \(sUrl)")
-        continue
-      }
-      log("Download \(sUrl)")
-      let fileTask = session.downloadTask(with: rurl)///not used so can be overwritten
-      fileTask.resume()
-      enqueuedDownloadTasks += 1
-    }
-    
-    log("Background downloads started: \(name) url: \(url) config: \(config) filesCount: \(enqueuedDownloadTasks)")
-    ///No Valid Downloads, nothing to wait for
-    if enqueuedDownloadTasks == 0 { callback(url, error(HttpError.invalidURL(url))) }
-  }
-  
   /// Download zip file to directory 'toDir' (zip file will be unpacked and removed)
   ///
   /// The download is performed via an iOS system process. During that time
