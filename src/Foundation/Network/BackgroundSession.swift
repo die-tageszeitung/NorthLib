@@ -397,6 +397,14 @@ open class BackgroundSession: HttpSession {
     
     let tempFile = File(tempPath)
     
+    ///additionally check and handle missing target dir error here, its maybe deleted meanwhile!?
+    guard Dir(item.destPath).exists else {
+      tempFile.remove()
+      taskStore.remove(task: item)
+      callback(item.url, error(BgSessionError.noDirectory(item.destPath)))
+      return
+    }
+    
     if item.isUnzip {
       let zf = ZipFile(path: tempPath)
       do {
