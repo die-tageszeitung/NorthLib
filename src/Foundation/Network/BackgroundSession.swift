@@ -232,7 +232,7 @@ open class BackgroundSession: HttpSession {
     return taskStore.tasks.count > 0
   }
   
-  static func cleanupUserDefaults() {
+  public static func cleanupUserDefaults() {
     UserDefaults().downloadTasks = []
   }
   
