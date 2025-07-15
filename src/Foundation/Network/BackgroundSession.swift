@@ -428,6 +428,7 @@ open class BackgroundSession: HttpSession {
     log("Background session finished \(taskStore.tasks.count) tasks open")
     logStatus(source: "urlSessionDidFinishEvents")
     cleanup()
+    completionHandler?()
     completionHandler = nil
   }
   
