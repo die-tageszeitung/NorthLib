@@ -160,6 +160,7 @@ open class HttpJob: DoesLog {
     var fn = self.filename
     if fn == nil { fn = tmppath() }
     debug("Task \(cid): downloaded \(File.basename(fn!))")
+    log("Task \(task.description): downloaded \(File.basename(fn!)) fn: \(filename ?? "-")")
     File(file).move(to: fn!)
   }
   
@@ -352,6 +353,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
       config.networkServiceType = .background
       config.isDiscretionary = false
       config.sessionSendsLaunchEvents = true
+      config.httpMaximumConnectionsPerHost = 4//required?
       debug("get config called for background")
     }
     else {
