@@ -422,7 +422,7 @@ open class BackgroundSession: HttpSession {
     else {
       let filename = item.url.lastPathComponent
       let dest = "\(item.destPath)/\(filename)"
-      tempFile.move(to: item.destPath)
+      tempFile.move(to: dest)
       log("file downloaded to \(dest)")
     }
     item.finished = true
