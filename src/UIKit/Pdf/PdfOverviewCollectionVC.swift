@@ -20,10 +20,17 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
   private let topGradient = VerticalGradientView()
   
   /// Define the menu to display on long touch of a MomentView
-  public var menuItems: [(title: String, icon: String, closure: (Any?)->())] = [] 
   public var cellLabelFont:UIFont? = UIFont.systemFont(ofSize: 11)
-  public var titleCellLabelFont:UIFont? = UIFont.systemFont(ofSize: 11)
   public var cellLabelLinesCount = 0
+  public var titleCell:PdfOverviewCvcCell? { didSet {
+    oldValue?.listenLabel.onTapping { _ in }
+    oldValue?.listenIcon.onTapping { _ in }
+    onTitleCellChangeClosure?(titleCell)
+  }}
+  private var onTitleCellChangeClosure: ((PdfOverviewCvcCell?) -> ())?
+  public func onTitleCellChange(closure: ((PdfOverviewCvcCell?) -> ())?) {
+    self.onTitleCellChangeClosure = closure
+  }
   
   // MARK: - Properties
   private let reuseIdentifier = "pdfCell"
@@ -98,15 +105,10 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
       return cell
     }
     
-    if indexPath.row == 0 {
-      cell.dateLabel.text = pdfModel.title
-      cell.dateLabel.font = self.titleCellLabelFont
-      cell.dateLabel.textColor = .white
-    }
+    if indexPath.row == 0 { titleCell = cell }
     
     cell.label.numberOfLines = self.cellLabelLinesCount
     cell.label.text = item.pageTitle
-    cell.menu?.menu = self.menuItems
     cell.imageView.contentMode = .scaleToFill
     return cell
   }
@@ -163,7 +165,7 @@ extension PdfOverviewCollectionVC {
   }
 }
 
-class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
+public class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
   
   //An array to cache the calculated attributes
   fileprivate var cachedAttributes = [UICollectionViewLayoutAttributes]()
@@ -172,9 +174,9 @@ class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
   let pdfModel: PdfModel
   let singlePageRatio: CGFloat
   
-  public var  singleItemSize:CGSize = .zero
-  public var  panoItemSize:CGSize = .zero
-  public var  collectionViewWidth:CGFloat = 0
+  public var singleItemSize:CGSize = .zero
+  public var panoItemSize:CGSize = .zero
+  public var collectionViewWidth:CGFloat = 0
   
   init(pdfModel: PdfModel) {
     self.pdfModel = pdfModel
@@ -187,11 +189,11 @@ class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
   }
   
   //The attributes for the item at the indexPath
-  override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+  public override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
     return cachedAttributes.valueAt(indexPath.item)
   }
   
-  override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
+  public override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
     var attributesArray = [UICollectionViewLayoutAttributes]()
     for attributes in cachedAttributes {
       if attributes.frame.intersects(rect) {
@@ -201,7 +203,7 @@ class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
     return attributesArray
   }
   
-  override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
+  public override func shouldInvalidateLayout(forBoundsChange newBounds: CGRect) -> Bool {
       guard let collectionView = collectionView else { return false }
       return !newBounds.size.equalTo(collectionView.bounds.size)
   }
@@ -241,8 +243,14 @@ class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
           case (_, .left):
             fallthrough
           default:
-            if prevPageType != nil { yOffset += rowHeight}
-            attributes.frame = CGRect(origin: CGPoint(x: xLeft, y: yOffset), size: singleItemSize)
+            if prevPageType == nil {//row 0 is left and pano, but no stretch!
+              attributes.frame = CGRect(origin: CGPoint(x: xLeft, y: yOffset), size: panoItemSize)
+            }
+            else {
+              yOffset += rowHeight
+              attributes.frame = CGRect(origin: CGPoint(x: xLeft, y: yOffset), size: singleItemSize)
+            }
+            
         }
         prevPageType = item.pageType
       }
@@ -253,7 +261,7 @@ class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
                          height: yOffset + rowHeight)
   }
   
-  override var collectionViewContentSize: CGSize {
+  public override var collectionViewContentSize: CGSize {
     get {
       return contentSize
     }

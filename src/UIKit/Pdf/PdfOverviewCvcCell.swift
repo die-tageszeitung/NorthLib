@@ -13,13 +13,17 @@ public class PdfOverviewCvcCell : UICollectionViewCell {
   public let imageView = UIImageView()
   public let label = UILabel()
   public let dateLabel = UILabel()
+  public let listenLabel = UILabel()
+  public let listenIcon = UIImageView()
+  public var imageWidthConstraint: NSLayoutConstraint?
   
-  var menu:ContextMenu?
- 
   public override func prepareForReuse() {
     self.imageView.image = nil
     self.label.text = nil
     self.dateLabel.text = nil
+    listenLabel.isHidden = true
+    listenIcon.isHidden = true
+    imageWidthConstraint?.isActive = false
   }
   
   override init(frame: CGRect) {
@@ -34,27 +38,42 @@ public class PdfOverviewCvcCell : UICollectionViewCell {
      */
     imageView.backgroundColor = .black
     imageView.contentMode = .scaleAspectFit
-    menu = ContextMenu(view: imageView)
     
     contentView.addSubview(imageView)
-    pin(imageView, to: contentView)
+    imageWidthConstraint = imageView.pinWidth(10, priority: .required)//placeholder width
+    imageWidthConstraint?.isActive = false
+    pin(imageView, to: contentView).right.priority = .defaultHigh
     
     label.numberOfLines = 0
     contentView.addSubview(label)
-    pin(label.leftGuide(), to: contentView.leftGuide())
+    pin(label.leftGuide(), to: imageView.leftGuide())
     pin(label.rightGuide(), to: contentView.rightGuide())
     //Pin the Label outside of the cell simplifies everything!
     pin(label.topGuide(), to: contentView.bottomGuide(), dist: 2.0)
     
     contentView.addSubview(dateLabel)
-    pin(dateLabel.leftGuide(), to: contentView.rightGuide(), dist: PdfDisplayOptions.Overview.interItemSpacing)
-    pin(dateLabel.bottomGuide(), to: contentView.bottomGuide(), dist: 3.0)
+    
+    listenLabel.textAlignment = .left
+    listenIcon.pinSize(CGSize(width: 24, height: 24))
+    
+    contentView.addSubview(listenIcon)
+    contentView.addSubview(listenLabel)
+    
+    pin(listenIcon.leftGuide(), to: imageView.rightGuide(), dist: PdfDisplayOptions.Overview.interItemSpacing)
+    pin(listenLabel.leftGuide(), to: listenIcon.rightGuide(), dist: PdfDisplayOptions.Overview.interItemSpacing)
+    pin(listenIcon.bottomGuide(), to: contentView.bottomGuide(), dist: 4.0)
+    pin(listenLabel.bottomGuide(), to: contentView.bottomGuide(), dist: 0.0)
+    
+    pin(dateLabel.leftGuide(), to: imageView.rightGuide(), dist: PdfDisplayOptions.Overview.interItemSpacing)
+    pin(dateLabel.topGuide(), to: contentView.topGuide(), dist: -2.0)
     dateLabel.numberOfLines = 2
     
 //    self.addBorder(.green, 0.5)
 //    self.contentView.addBorder(.yellow, 1.0)
 //    self.imageView.addBorder(.blue, 1.5)
 //    self.label.addBorder(.orange, 1.0)
+    listenLabel.isHidden = true
+    listenIcon.isHidden = true
   }
   
   required init?(coder: NSCoder) {
