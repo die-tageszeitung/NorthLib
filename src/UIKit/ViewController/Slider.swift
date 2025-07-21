@@ -416,6 +416,10 @@ open class MyButtonSlider:ButtonSlider{
     }
   }
   
+  override public var shift: CGFloat {
+    return showMenuImage ? imageOffsetXMenu : imageOffsetXDefault
+  }
+  
   public func applyImage(open: Bool = false){
     let newImage
     = open ? closeImage
@@ -596,11 +600,11 @@ open class ButtonSlider: Slider {
   
   public func buttonMoveOut( _ duration: TimeInterval = 0.7, _ delay: TimeInterval = 0.1, atEnd: (()->())? = nil ) {
     UIView.animate(withDuration: duration/2, delay: delay, options: .curveEaseOut, animations: {
-      self.leadingButtonConstraint.constant = -self.button.frame.size.width+2
+      self.leadingButtonConstraint.constant = -self.button.frame.size.width+2//Animation Step 1 for hide: left 2px visible => bounce...
       self.active.view.layoutIfNeeded()
     } ) { _ in
       UIView.animate(withDuration: duration/2, delay: 0, options: .curveEaseOut, animations: {
-        self.leadingButtonConstraint.constant = -self.button.frame.size.width+7
+        self.leadingButtonConstraint.constant = -self.button.frame.size.width+7 //Final Animation Step 2 for hide: left 7px visible
         self.active.view.layoutIfNeeded()
       } ) { [weak self] _ in
         if let closure = atEnd { closure() }
