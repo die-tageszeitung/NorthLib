@@ -7,64 +7,149 @@
 
 import Foundation
 
-
 /// Error(s) that may be encountered during BackgroundSession download operations
 public enum BgSessionError: LocalizedError {
   /// Download with same url is already running
-  case alreadyInUse(String)
-  case unzipFailed(String)
   case noDirectory(String)
-  case notFound(String)
   case invalidName(String)
   
   public var description: String {
     switch self {
-      case .alreadyInUse(let url): return "Background download: already running: \(url)"
-      case .unzipFailed(let msg):  return "Background download: unzip failed: \(msg)"
       case .noDirectory(let dir):  return "Background download: no directory: \(dir)"
-      case .notFound(let name):    return "Background download: not found: \(name)"
       case .invalidName(let name): return "Background download: invalid name: \(name)"
     }
-  }    
+  }
   public var errorDescription: String? { return description }
 }
 
+/// Represents a single download task entry.
+fileprivate struct DownloadTaskData: Codable, DoesLog {
+  let id: String
+  let url: String
+  let destPath: String
+  let isUnzip: Bool
+  var finished: Bool = false
+  var failedCount: Int = 0
+}
 
 fileprivate extension UserDefaults {
-  private static let bgSessKey = "BackgroundSessions"
+  private static let key = "BackgroundSessionDownloadTasks"
   
-  var backgroundSessions: [String: Any]? {
+  var downloadTasks: [DownloadTaskData]? {
     get {
-      dictionary(forKey: Self.bgSessKey)
+      if let data = data(forKey: Self.key) {
+        return try? JSONDecoder().decode([DownloadTaskData].self, from: data)
+      }
+      return nil
     }
     set {
       if let newValue = newValue {
-        set(newValue, forKey: Self.bgSessKey)
+        let data = try? JSONEncoder().encode(newValue)
+        set(data, forKey: Self.key)
       } else {
-        removeObject(forKey: Self.bgSessKey)
+        removeObject(forKey: Self.key)
       }
     }
   }
 }
 
-/// A BackgroundSession is used to download one file (optionally unzipping it)
+/// A thread-safe store for managing download task data using UserDefaults.
+fileprivate class DownloadTaskStore: DoesLog {
+  private let queue = DispatchQueue(label: "de.taz.downloadTasks.queue", attributes: .concurrent)
+  private var _tasks: [DownloadTaskData] = []
+  
+  /// Returns a snapshot of all stored tasks.
+  var tasks: [DownloadTaskData] { queue.sync {_tasks} }
+  
+  init() {
+    // Init from UserDefaults
+    if let saved = UserDefaults().downloadTasks {
+      _tasks = saved
+      log("DownloadTaskStore initialized with \(saved.count) tasks from UserDefaults")
+    }
+  }
+  
+  private var newId: String {
+    queue.sync {
+      let next = _tasks
+        .compactMap { Int($0.id) }
+        .max()
+        .map { $0 + 1 } ?? 1
+      return String(next)
+    }
+  }
+  
+  fileprivate func newDownloadTaskData(for urlString: String, destPath: String, unzip: Bool) -> DownloadTaskData? {
+    let dlTask = DownloadTaskData(id: newId, url: urlString, destPath: destPath, isUnzip: unzip)
+    append(dlTask)
+    return dlTask
+  }
+  
+  private func append(_ task: DownloadTaskData) {
+    queue.async(flags: .barrier) {[weak self] in
+      guard let self = self else { return }
+      _tasks.append(task)
+      UserDefaults().downloadTasks = _tasks
+    }
+  }
+  
+  func save(_ task: DownloadTaskData) {
+    queue.async(flags: .barrier) {[weak self] in
+      guard let self = self else { return }
+      if let index = _tasks.firstIndex(where: { $0.id == task.id }) {
+        _tasks[index] = task
+        log("item with \(task.id) updated")
+      } else {
+        _tasks.append(task)
+        log("item with \(task.id) saved")
+      }
+      UserDefaults().downloadTasks = _tasks
+    }
+  }
+  
+  func remove(task: DownloadTaskData) {
+    queue.async(flags: .barrier) {[weak self] in
+      guard let self = self else { return }
+      _tasks.removeAll { $0.id == task.id }
+      UserDefaults().downloadTasks = _tasks
+    }
+  }
+  
+  func removeAll() {
+    queue.async(flags: .barrier) {[weak self] in
+      guard let self = self else { return }
+      _tasks = []
+      UserDefaults().downloadTasks = []
+    }
+  }
+  
+  func get(item withId: String?) -> DownloadTaskData? {
+    guard let id = withId else { return nil }
+    return queue.sync {[weak self] in
+      guard let self = self else { return nil }
+      return _tasks.first { $0.id == id }
+    }
+  }
+}
+
+/// One BackgroundSession is used to download files (optionally unzipping it)
 /// from an HTTP(S) URL.
-/// 
+///
 /// Unlike downloads via ``HttpSession`` this class uses a system process to
-/// download a file. This process decides when to start the download (eg. waiting
+/// download files. This process decides when to start the download (eg. waiting
 /// for network availability). When the system has completed the download to
 /// a temporary file it informs a BackgroundSession object about the availability
 /// of the data. During that time the system may have suspended the app. In that
 /// case it restarts the app and delivers an event to the recreated BackgroundSession
 /// object.
-/// 
-/// Downloads using BackgroundSession objects are usually performed in the background 
+///
+/// Downloads using BackgroundSession object are usually performed in the background
 /// (eg. upon delivery of a push notification) or when large files have to be
 /// transfered.
-/// 
-/// To download a file from the URL _url_ to a directory _dir_ perform the 
+///
+/// To download a file from the URL _url_ to a directory _dir_ perform the
 /// following steps:
-/// 
+///
 /// ```swift
 ///   func dlCallback(err: Error?) {
 ///     // download has been completed, handle eventual error
@@ -75,13 +160,13 @@ fileprivate extension UserDefaults {
 ///     bgs.download(toDir: dir)
 ///   }
 ///   catch ...
-/// ``` 
+/// ```
 /// The initializer may throw an Error which should be handled. _dlCallback_
 /// is called when the download is complete and has been moved to _dir_. The
 /// Error _err_ is nil when no errors occurred, otherwise it indicates the type
 /// of error.
-/// To handle the case of app suspension you have to provide a method 
-/// 
+/// To handle the case of app suspension you have to provide a method
+///
 /// ```swift
 ///   application(_:handleEventsForBackgroundURLSession:completionHandler:)
 /// ```
@@ -103,8 +188,10 @@ fileprivate extension UserDefaults {
 ///
 /// To recreate the BackgroundSession upon app suspension some data is preserved
 /// using UserDefaults. If the app crashes it may happen that this data remains
-/// in the user's defaults database. To remove this data completely (and that of
+/// in the user's defaults store. To remove this data completely (and that of
 /// other background sessions) use ``cleanupUserDefaults()``.
+///
+/// Background Downloads can also handled in App foreground State!
 ///
 /// For the app to use background downloads and remote notifications under iOS
 /// you should add the following capabilities to your Info.plist:
@@ -122,215 +209,41 @@ fileprivate extension UserDefaults {
 /// - ``App.mayBackgroundNotification``
 ///
 open class BackgroundSession: HttpSession {
+  
+  let maxFailCount = 3
+  
+  @Default("lastDownloadTaskIdentifier")
+  var lastDownloadTaskIdentifier: Int
+  
+  private static let backgroundSessionName = "de.taz.download.backgroundsession"
+  
   public override var isDebugLogging: Bool { false }
-  // Synchronize thread access
-  static fileprivate var spoint = Serial(label: "NorthLib.BackgroundSession")
-  static fileprivate func queue(_ closure: @escaping ()->Int) -> Int
-  { return spoint.queue(closure: closure) }
   
-  /// Session number of _this_ session
-  public private(set) var sessionNumber: Int
-  
-  /// Dictionary of background sessions
-  public private(set) static var bgSessions: [String:BackgroundSession] = [:]
   // The callback informing the caller about success/failure
   fileprivate var callback: (String, Error?)->() = {_, _ in}
   // The iOS completion handler
   fileprivate var completionHandler: (()->())?
-  /// Url of file to download
-  public private(set) var url: String
-  /// Directory to write download to
-  public private(set) var destPath: String?
-  /// Should a zip-file be extracted (zip is removed after extraction)
-  public private(set) var isUnzip: Bool = false
-  // The download task
-  fileprivate var task: URLSessionDownloadTask?
+  // The download tasks for cancelation and resuming?
+  fileprivate var tasks: [URLSessionDownloadTask] = []
+  fileprivate var taskStore = DownloadTaskStore()
   
-  // Create new session number
-  fileprivate static func newSession() -> Int {
-    return queue {
-      var last: Int = 0
-      var sessions: [String:Any] = [:]
-      if let sess = UserDefaults().backgroundSessions {
-        sessions = sess
-      }
-      if let tmp = sessions["lastSessionNumber"] as? Int {
-        Log.log("found lastSessionNumber: \(tmp)")
-        last = tmp
-      }
-      else {
-        
-      }
-      last += 1
-      sessions["lastSessionNumber"] = last
-      UserDefaults().backgroundSessions = sessions
-      return last
-    }
+  public var hasOpenDownloads: Bool {
+    if tasks.count > 0 { return true }
+    return taskStore.tasks.count > 0
+  }
+  
+  public static func cleanupUserDefaults() {
+    UserDefaults().downloadTasks = []
   }
   
   /// Cancels and invalidates the session
-  fileprivate func invalidate() {
-    task?.cancel()
+  fileprivate func cleanup() {
+    log("BackgroundSession cleanup tasks: \(tasks.count) and taskStore: \(taskStore.tasks.count)")
+    for task in tasks { task.cancel() }
+    taskStore.removeAll()
+    tasks = []
     session.invalidateAndCancel()
     debug("Invalidated session \(name)")
-  }
-  
-  // Write session configuration to user defaults
-  fileprivate func persistUserDefaults() {
-    var pdata: [String:Any] = [:]
-    pdata["url"] = url
-    pdata["destPath"] = destPath
-    pdata["isUnzip"] = isUnzip
-    var sessions: [String:Any] = [:]
-    if let sess = UserDefaults().backgroundSessions {
-      sessions = sess
-    }
-    sessions[name] = pdata
-    UserDefaults().backgroundSessions = sessions
-  }
-  
-  // Recreate session from user defaults
-  fileprivate static func fromUserDefaults(name: String, isBackground: Bool) throws -> BackgroundSession {
-    if let sess = UserDefaults().backgroundSessions,
-       let pdata = sess[name] as? [String:Any] {
-      if let destPath = pdata["destPath"] as? String,
-         let url = pdata["url"] as? String,
-         let isUnzip = pdata["isUnzip"] as? Bool {
-        let bgs = BackgroundSession(url, name: name, isBackground: isBackground)
-        bgs.destPath = destPath
-        bgs.isUnzip = isUnzip
-        return bgs
-      }
-    }
-    throw BgSessionError.notFound(name)
-  }
-  
-  // Remove session data from user defaults and remove session from bgSessions dictionary
-  fileprivate func removeUserDefaults() {
-    if var sess = UserDefaults().backgroundSessions {
-      log("removed user defaults")
-      sess[name] = nil
-      if sess.count == 1, sess["lastSessionNumber"] != nil {
-        sess["lastSessionNumber"] = nil
-        log("removed lastSessionNumber")
-      }
-      UserDefaults().backgroundSessions = sess
-    }
-    else {
-      log("cannot remove user defaults: not found")
-    }
-    log("BackgroundSession count: \(UserDefaults().backgroundSessions?.count ?? -1)")
-  }
-  
-  /// Remove all BackgroundSession data from UserDefaults
-  ///
-  /// There may be some session data left in UserDefaults (eg. as a result of
-  /// app crashes). This method removes all BackgroundSession-related data from
-  /// UserDefaults.
-  ///
-  static public func cleanupUserDefaults() {
-    UserDefaults().backgroundSessions = nil
-  }
-  
-  // Initializer used internally
-  fileprivate init(_ url: String, name: String? = nil, isBackground: Bool) {
-    var n: String
-    if name == nil {
-      self.sessionNumber = BackgroundSession.newSession()
-      n = String(sessionNumber)
-    }
-    else {
-      n = name!
-      self.sessionNumber = Int(n)!
-    }
-    self.url = url
-    super.init(name: n, isBackground: isBackground)
-    debug("name=\(n)")
-    BackgroundSession.bgSessions[n] = self
-  }
-  
-  /// Initialize a new background session with an url to download from and
-  /// a callback to inform when the download is finished or an Error has been
-  /// detected.
-  ///
-  /// This doesn't start the download, use either ``download(toDir:)`` or
-  /// ``downloadZip(toDir:)``. If this initializer doesn't fail all other
-  /// error conditions are passed to the callback closure as Error value.
-  /// The closure may be called on an arbitrary thread which will usually
-  /// not be the main thread.
-  ///
-  /// - Parameters:
-  ///   - url: HTTP(S) url of file to download (String)
-  ///   - asBackgroundSession: true if background session should be used
-  ///   - callback: closure to call when download is finished, if successful,
-  ///               the passed Error value is nil
-  ///
-  /// - Throws: `BgSessionError.alreadyInUse` if a session for the same URL is already in use
-  ///
-  public convenience init(_ url: String, asBackgroundSession: Bool, callback: @escaping (String, Error?)->()) throws {
-    if BackgroundSession.search(url: url) { throw BgSessionError.alreadyInUse(url) }
-    ///do not use Background Session in Simulator it did not work!
-    let background = Device.isSimulator ? false : asBackgroundSession
-    self.init(url, isBackground:background)
-    self.callback = callback
-  }
-  
-  // Search for active (in memory) BackgroundSession
-  static private func searchActive(url: String) -> Bool {
-    for (_, sess) in bgSessions {
-      if sess.url == url { return true; }
-    }
-    return false
-  }
-  
-  // Search for BackgroundSession waiting for completion
-  static private func searchWaiting(url: String) -> String? {
-    if let sessions = UserDefaults().backgroundSessions {
-      for (name, sess) in sessions {
-        if let s = sess as? [String:Any], let surl = s["url"] as? String {
-          if surl == url { return name }
-        }
-      }
-    }
-    return nil
-  }
-  
-  public static var waitingCount: Int {
-    if let sessions = UserDefaults().backgroundSessions {
-      ///first item is maybe not a session its a index
-      return sessions.count
-    }
-    return 0
-  }
-  
-  public static func logWaiting() {
-    if let sessions = UserDefaults().backgroundSessions {
-      for (name, sess) in sessions {
-        if let s = sess as? [String:Any], let surl = s["url"] as? String {
-          Log.log("Waiting Session: \(name) url: \(surl)")
-        }
-        else {
-          Log.log("Waiting Session: \(name) content: \(sess)")
-        }
-      }
-    }
-  }
-  
-  /// Search for active (in memory) BackgroundSessions or Sessions waiting to
-  /// be resumed.
-  ///
-  /// This methods takes a String _url_ as argument and searches for BackgroundSessions
-  /// downloading this _url_. Such a Session may be in memory (has been started and
-  /// the App has not been suspended) or is represented via UserDefaults and is
-  /// waiting to be resumed.
-  ///
-  /// - Parameters:
-  ///   - url: the url of the file to download
-  ///
-  /// - Returns: true (is downloading) or false
-  ///
-  static public func search(url: String) -> Bool {
-    return searchActive(url: url) || searchWaiting(url: url) != nil
   }
   
   /// Factory method returning an already defined session (if it has been previously created)
@@ -354,225 +267,177 @@ open class BackgroundSession: HttpSession {
   /// - Throws: `BgSessionError.invalidName` if name is not a number
   /// - Throws: `BgSessionError.notFound` if a session named _name_ is undefined
   ///
-  @discardableResult
   static public func resumeBackgroundURLSession(name: String, completionHandler: @escaping ()->(),
-                                                callback: @escaping (String, Error?)->()) throws -> BackgroundSession {
-    guard Int(name) != nil else { throw BgSessionError.invalidName(name) }
-    var bgsession: BackgroundSession
-    if let bgsess = BackgroundSession.bgSessions[name] {
-      bgsession = bgsess
-      bgsession.log("Background download resume: session found: \(name) delegate: \(String(describing: bgsession.session.delegate))")
-    }
-    else {
-      bgsession = try fromUserDefaults(name: name, isBackground: true)
-      bgsession.log("Background download resume: session recreated: \(bgsession.url) delegate: \(String(describing: bgsession.session.delegate))")
-    }
-    bgsession.callback = callback
-    bgsession.completionHandler = completionHandler
-    bgsession.session.getAllTasks { tasks in
-      bgsession.log("Resume found \(tasks.count) tasks")
+                                                callback: @escaping (String, Error?)->()) {
+    let session = shared(callback: callback)
+    session.log("resume Downloads for session: \(name)")
+    session.completionHandler = completionHandler
+    
+    session.session.getAllTasks{ tasks in
+      session.log("found \(tasks.count) tasks to handle")
       for task in tasks {
-        bgsession.log("→ Task ID: \(task.taskIdentifier) | URL: \(task.originalRequest?.url?.absoluteString ?? "-") | State: \(task.state.rawValue)")
+        session.log("→ Task ID: \(String(describing: task.taskDescription)) | URL: \(String(describing: task.originalRequest?.url?.absoluteString)) | State: \(task.state.rawValue)")
         if task.state == .suspended {
-          bgsession.log("Resuming suspended task: \(task.taskIdentifier)")
+          session.log("Resuming suspended task: \(String(describing: task.taskDescription))")
           task.resume()
         } else {
-          bgsession.log("Task already running or completed: \(task.taskIdentifier)")
+          session.log("Task already running or completed: \(String(describing: task.taskDescription))")
         }
       }
-      if tasks.count == 0, let url = URL(string: bgsession.url) {
-        // Not running → start it again!
-        let request = URLRequest(url: url)
-        let task = bgsession.session.downloadTask(with: request)
+    }
+  }
+  
+  /// Resumes all Downloads with the specified priority.
+  /// - Parameters:
+  ///   - archived: Also resume UserDefaults archived Download Tasks
+  ///   - completion: Called when download finishes or fails.
+  public func resume(archived: Bool, priority: Float = URLSessionTask.defaultPriority){
+    let priority = max(0.0, min(priority, 1.0))
+    var runningTasks = [String]()
+    log(tasks.isEmpty
+        ? "resume: no currentTasks"
+        : "resume: \(tasks.count) currentTasks")
+    
+    for task in tasks {
+      runningTasks.appendIfPresent(task.taskDescription)
+      if task.state == .suspended {
+        task.priority = priority
+        log("...resuming suspended task: \(task.taskDescription ?? "-")")
         task.resume()
-//        bgsession.log("WARNING DO NOT CALL dlCallback here...")
-//        callback(bgsession.url, nil)
       }
     }
-    return bgsession
-  }
-  
-  public static func restartAllArchivedDownloads(callback: @escaping (String, Error?)->()) throws {
-    #warning("There is something missing found 0 Tasks to resume")
-    if let sessions = UserDefaults().backgroundSessions {
-      Log.log("Restarting \(sessions.count) sessions.")
-      for (name, sess) in sessions {
-        if let s = sess as? [String:Any], let surl = s["url"] as? String {
-          try Self.resumeBackgroundURLSession(name: name, completionHandler: {
-            Log.log("Background download resume finished for \(name)")
-          }, callback: callback)
+    
+    session.getAllTasks{ [weak self] tasks in
+      guard let self = self else { return }
+      guard !tasks.isEmpty else {
+        log("No System tasks to resume found")
+        return
+      }
+      log("\(tasks.count) System tasks to resume found")
+      for task in tasks {
+        task.priority = priority
+        if let id = task.taskDescription {
+          if runningTasks.contains(id) { continue }
+        }
+        if task.state == .suspended {
+          log("...Resuming suspended task: \(task.taskDescription ?? "-")")
+          task.resume()
+        } else {
+          log("...Task \(task.taskDescription ?? "-"), URL: \(task.originalRequest?.url?.absoluteString ?? "-"), State: \(task.state.rawValue) already running or completed")
         }
       }
     }
-  }
-  
-  public static func restartAllPendingDownloads() {
-    Log.log("🎲 Restarting all pending downloads! ")
-      // Durchlaufe alle aktiven Sessions
-    for (_, sess) in bgSessions {
-      // Hole alle Tasks der Session
-
-      sess.session.getAllTasks { tasks in
-        var resumedCount = 0
-        for task in tasks {
-          if task.state == .suspended {
-            task.resume()
-            resumedCount += 1
-          }
-        }
-        Log.log("Restarted \(resumedCount) pending tasks for session: \(sess.url)")
-      }
+    
+    guard archived else { return }
+    log("Resume \(taskStore.tasks.count) archived tasks if not yet running")
+    
+    for downloadTaskData in taskStore.tasks {
+      if runningTasks.contains(downloadTaskData.id) { continue }
+      log("...Resuming archived task: \(downloadTaskData.id) url: \(downloadTaskData.url)")
+      startDownload(data: downloadTaskData, priority: priority)
     }
   }
   
   // Initiate background download
-  fileprivate func download() {
-    guard let rurl = URL(string: url) else {
-      callback(url, error(HttpError.invalidURL(url)))
+  public func download(urlString: String, destPath: String, unzip: Bool, priority: Float = 0.5) {
+    guard URL(string: urlString) != nil else {
+      callback(urlString, error(HttpError.invalidURL(urlString)))
       return
     }
-    guard Dir(destPath!).exists else {
-      callback(url, error(BgSessionError.noDirectory(destPath!)))
+    guard Dir(destPath).exists else {
+      callback(urlString, error(BgSessionError.noDirectory(destPath)))
       return
     }
-    task = session.downloadTask(with: rurl)
-    task?.resume()
-    log("Background download started: \(name) url: \(url) config: \(config)")
-  }
     
-  /// Download file to directory 'toDir'
-  ///
-  /// The download is performed via an iOS system process. During that time
-  /// the calling process may be terminated. In that case it is restarted when
-  /// the download is complete and the UIApplicationDelegate method
-  /// ```swift
-  ///   application(_:handleEventsForBackgroundURLSession:completionHandler:)
-  /// ```
-  /// is called.
-  ///
-  /// The directory _toDir_ must exist, otherwise the closure passed to the
-  /// initializer is called with an Error value. If the file to download
-  /// already exists at _toDir_ it will be overwritten.
+    guard let data = taskStore.newDownloadTaskData(for: urlString, destPath: destPath, unzip: unzip) else {
+      log("Background download failed for url: \(urlString) ")
+      return
+    }
+    
+    startDownload(data: data)
+    log("Background download started with id: \(data.id) url: \(urlString) destPath: \(destPath) isUnzip: \(unzip)")
+  }
+  
+  /// Starts a background download task with the specified priority.
   /// - Parameters:
-  ///   - toDir: path to directory for storing the download
-  public func download(toDir: String) {
-    destPath = toDir
-    persistUserDefaults()
-    download()
-  }
-  
-  /// Download zip file to directory 'toDir' (zip file will be unpacked and removed)
-  ///
-  /// The download is performed via an iOS system process. During that time
-  /// the calling process may be terminated. In that case it is restarted when
-  /// the download is complete and the UIApplicationDelegate method
-  /// ```swift
-  ///   application(_:handleEventsForBackgroundURLSession:completionHandler:)
-  /// ```
-  /// is called.
-  ///
-  /// The directory _toDir_ must exist, otherwise the closure passed to the
-  /// initializer is called with an Error value. If the files to unpack
-  /// already exist at _toDir_ they will be overwritten.
-  ///
-  /// - Parameter toDir: path to directory for unpacking the download to
-  public func downloadZip(toDir: String) {
-    isUnzip = true
-    download(toDir: toDir)
-  }
+  ///   - data: The DownloadTaskData object to download.
+  ///   - priority: A value between 0.0 (low) and 1.0 (high). Values outside this range are clamped.
+  fileprivate func startDownload(data: DownloadTaskData, priority: Float = URLSessionTask.defaultPriority) {
     
-  // Do some cleanup: remove user default values and remove session from bgSessions
-  fileprivate func cleanup(_ err: Error? = nil) {
-    removeUserDefaults()
-    log("Session: \(name) | total session count: \(BackgroundSession.bgSessions.count) err: \(String(describing: err))")
-    BackgroundSession.bgSessions[name] = nil
-    if let err { error("Background download failed for url: \(url) with error: \(err)") }
-    callback(url, err)
-  }
+    let priority = max(0.0, min(priority, 1.0))
     
-  /// Cleans up all known background sessions and removes stale entries.
-  /// Avoids double invalidation by tracking already handled session names.
-  /// maybe not needed? due ??? appdelegate resumes, error cleans
-  public static func cleanupAllSessions() {
-    _ = BackgroundSession.queue {
-      var cleanedSessions = Set<String>()
-      let dummyURL = "https://localhost/cleanup"
-      
-      // Invalidate all in-memory sessions
-      for (name, bgSession) in bgSessions {
-        if !cleanedSessions.contains(name) {
-          bgSession.invalidate()
-          cleanedSessions.insert(name)
-        }
-      }
-      
-      if let sessions = UserDefaults().backgroundSessions {
-        for (name, _) in sessions {
-            // Skip invalid session names e.g. "lastSessionNumber"
-          if Int(name) == nil { continue }
-          if !cleanedSessions.contains(name) {
-            // Create dummy session only to invalidate it
-            let dummySession = BackgroundSession(dummyURL, name: name, isBackground: true)
-            dummySession.invalidate()
-            cleanedSessions.insert(name)
-          }
-        }
-      }
-      // Final cleanup
-      cleanupUserDefaults()
-      bgSessions.removeAll()
-      Log.log("BackgroundSession cleanup complete. Invalidated \(cleanedSessions.count) session(s).")
-      return 0
+    guard let rurl = URL(string: data.url) else {
+      callback(data.url, error(HttpError.invalidURL(data.url)))
+      return
     }
-  }
-  
-  // Background download completed successfully
-  fileprivate func downloadCompleted(path: String) {
-    debug("Background download completed to tmp: \(path)")
-    if isUnzip {
-      let zf = ZipFile(path: path)
-      do {
-        try zf.unpack(toDir: destPath!)
-        log("Background download: zip file unpacked to \(destPath!)")
-      }
-      catch { log("Background download: unzip failed: \(error)")}
+    let task = session.downloadTask(with: rurl)
+    task.taskDescription = data.id
+    task.priority = priority
+    if tasks.contains(where: { $0.taskDescription == data.id }) == false {
+      tasks.append(task)
     }
-    else {
-      let filename = url.lastPathComponent
-      let dest = "\(destPath!)/\(filename)"
-      File(path).move(to: dest)
-      log("Background download: file downloaded to \(dest)")
-    }
+    task.resume()
   }
   
   // Background download failed
-  fileprivate func downloadFinished(error err: Error? = nil) {
-    log("Download finished. Checking pending tasks...")
+  fileprivate func logStatus(source: String) {
     session.getAllTasks {[weak self] tasks in
-      let remainingTasks = tasks.filter { $0.state != .completed }
-      self?.log("\(remainingTasks.count > 0 ? "⚠️WARNING!":"")...\(remainingTasks.count)/\(tasks.count) tasks remaining")
-      for task in remainingTasks {
-        self?.log("→ Task ID: \(task.taskIdentifier) | URL: \(task.originalRequest?.url?.absoluteString ?? "-") | State: \(task.state.rawValue)")
+      guard let self = self else { return }
+      let incompleetedTasks = tasks.filter { $0.state != .completed }
+      log("Check from: \(source) remaining tasks:\n Session.open(\(incompleetedTasks.count))\n Session.total(\(tasks.count))\n Owned(\(self.tasks.count))\n Store(\(self.taskStore.tasks.count))")
+    }
+  }
+  
+  private func handleDownloadedFile(tempPath: String, for downloadTask: URLSessionDownloadTask) {
+    guard var item = taskStore.get(item: downloadTask.taskDescription) else {
+      log("No Download Task Item found with ID \(String(describing: downloadTask.taskDescription)), url: \(String(describing: downloadTask.originalRequest?.url))")
+      return
+    }
+    log("Handle for Task with ID \(String(describing: downloadTask.taskDescription)), url: \(String(describing: downloadTask.originalRequest?.url))")
+    
+    let tempFile = File(tempPath)
+    
+    ///additionally check and handle missing target dir error here, its maybe deleted meanwhile!?
+    guard Dir(item.destPath).exists else {
+      tempFile.remove()
+      taskStore.remove(task: item)
+      callback(item.url, error(BgSessionError.noDirectory(item.destPath)))
+      return
+    }
+    
+    if item.isUnzip {
+      let zf = ZipFile(path: tempPath)
+      do {
+        try zf.unpack(toDir: item.destPath)
+        log("Zip file unpacked to \(item.destPath)")
       }
-      if remainingTasks.count > 0  {
-        self?.log("...do not cleanup")
+      catch let error {
+        log("unzip failed: \(error)")
+        tempFile.remove()
+        taskStore.remove(task: item)
+        callback(item.url, error)
         return
       }
     }
-    cleanup(err)
+    else {
+      let filename = item.url.lastPathComponent
+      let dest = "\(item.destPath)/\(filename)"
+      tempFile.move(to: dest)
+      log("file downloaded to \(dest)")
+    }
+    item.finished = true
+    taskStore.save(item)
   }
   
-
   // MARK: - URLSessionDelegate Protocol
-  
   // Background processing complete - call background completion handler
   @_documentation(visibility: private)
   public func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
-    log("Background session '\(name)' finished")
-    if let cb = completionHandler {
-      completionHandler = nil
-      DispatchQueue.main.async { cb() }
-    }
+    log("Background session finished \(taskStore.tasks.count) tasks open")
+    logStatus(source: "urlSessionDidFinishEvents")
+    cleanup()
+    completionHandler?()
+    completionHandler = nil
   }
   
   // MARK: - URLSessionTaskDelegate Protocol
@@ -581,7 +446,7 @@ open class BackgroundSession: HttpSession {
   @_documentation(visibility: private)
   public override func urlSession(_ session: URLSession, task: URLSessionTask,
                                   didCompleteWithError completionError: Swift.Error?) {
-    log("Background session urlSession tId: '\(task.taskIdentifier)' didCompleteWithError err: \(String(describing: completionError))")
+    log("Task: '\(String(describing: task.taskDescription))' didComplete err: \(String(describing: completionError))")
     var err: Error? = nil
     if let resp = task.response as? HTTPURLResponse {
       let statusCode = resp.statusCode
@@ -590,11 +455,22 @@ open class BackgroundSession: HttpSession {
         err = HttpError.serverError(statusCode)
       }
     }
-    downloadFinished(error: err)
-    ///sometimes delegate events came staggered; ensure session.getAllTasks really catch all tasks
-//    onThreadAfter(1.0) { [weak self] in
-//      self?.downloadFinished(error: err)
-//    }
+    
+    guard var item = taskStore.get(item: task.taskDescription) else {
+      log("No Download Task Item found with ID \(String(describing: task.taskDescription)), url: \(String(describing: task.originalRequest?.url))")
+      callback(task.originalRequest?.url?.absoluteString ?? "unknown", err ?? completionError)
+      return
+    }
+    
+    if err == nil, completionError != nil, item.failedCount < maxFailCount { ///Retry!
+      item.failedCount += 1
+      startDownload(data: item, priority: task.priority)
+      taskStore.save(item)
+    }
+    else {
+      callback(item.url, err ?? completionError)
+      taskStore.remove(task: item)
+    }
   }
   
   // MARK: - URLSessionDownloadDelegate Protocol
@@ -603,8 +479,24 @@ open class BackgroundSession: HttpSession {
   @_documentation(visibility: private)
   public override func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
                                   didFinishDownloadingTo location: URL) {
-    log("Background session urlSession(URLSession, URLSessionDownloadTask, didFinishDownloadingTo URL) tId: '\(downloadTask.taskIdentifier)' ")
-    downloadCompleted(path: location.path)
+    handleDownloadedFile(tempPath: location.path, for: downloadTask)
   }
-
+  
+  
+  // MARK: - Factory & Singleton
+  fileprivate static var _shared: BackgroundSession?
+  
+  /// Returns the shared BackgroundSession instance using a background URLSession.
+  /// Always uses a background session, even if the app is in the foreground.
+  /// Ensures consistent download handling across app lifecycle (foreground/background).
+  ///
+  /// - Parameter callback: Completion handler called when a download finishes.
+  /// - Returns: Shared BackgroundSession instance.
+  public static func shared(callback: @escaping (String, Error?) -> Void) -> BackgroundSession {
+    if _shared == nil {
+      _shared = BackgroundSession(name: backgroundSessionName, isBackground: true)
+    }
+    _shared?.callback = callback
+    return _shared!
+  }
 } // BackgroundSession

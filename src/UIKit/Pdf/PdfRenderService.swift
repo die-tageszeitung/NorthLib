@@ -118,12 +118,11 @@ public class PdfRenderService : DoesLog {
           additionalInfo = "A Page with Document: \(String(describing:item.pdfPage?.document?.documentURL))"
         }
         
-        self?.log("Render for: \(additionalInfo) done"
+        self?.debug("Render for: \(additionalInfo) done"
               + "\n   scale: \(scale) width: \(width ?? 0) height: \(height ?? 0) screenScaled: \(screenScaled)"
               + "\n   screenScaled: \(screenScaled) backgroundRenderer: \(backgroundRenderer)"
               + "\n   Duration since enqueued: \(Date().timeIntervalSince(debugEnqueuedStart)) "
-              + "renderStart: \(Date().timeIntervalSince(debugRenderStart))",
-                  logLevel: .Debug)
+              + "renderStart: \(Date().timeIntervalSince(debugRenderStart))")
         finishedCallback(img)
       }
       semaphore.signal()
@@ -131,7 +130,7 @@ public class PdfRenderService : DoesLog {
   }
 }
 
-extension PDFPage : DoesLog {
+extension PDFPage : @retroactive DoesLog {
 
   public var isDebugLogging: Bool { PdfRenderService.isDebug }
 
@@ -144,7 +143,7 @@ extension PDFPage : DoesLog {
     frame.origin.x = 0
     frame.origin.y = 0
     if frame.width > 300 {
-      self.log("TRY TO RENDER IMAGE WITH: \(frame.size)", logLevel: .Debug)
+      self.debug("TRY TO RENDER IMAGE WITH: \(frame.size)")
     }
     
     if avoidRenderDueExpectedMemoryIssue(frame, scale) { return nil }
@@ -165,7 +164,7 @@ extension PDFPage : DoesLog {
     
     UIGraphicsEndImageContext()
     if frame.width > 300 {
-      log("rendered image width: \(frame.width) imagesize: \(img?.mbSize ?? 0) MB", logLevel: .Debug)
+      debug("rendered image width: \(frame.width) imagesize: \(img?.mbSize ?? 0) MB")
     }
     return img
   }
@@ -189,12 +188,12 @@ extension PDFPage : DoesLog {
     
     //Print Debug Info
     if isProblematicSystemVersion, tooBig {
-      self.log("⚠️ image rendering \(scaleInfo) is expected to fail! 🛑 Do Not Render! expectedImageSize: \(expectedImageSize/(1024*1024)) MB > \(maxUseableRam/(1024*1024)) MB useable RAM", logLevel: .Debug)
+      self.debug("⚠️ image rendering \(scaleInfo) is expected to fail! 🛑 Do Not Render! expectedImageSize: \(expectedImageSize/(1024*1024)) MB > \(maxUseableRam/(1024*1024)) MB useable RAM")
     }
     else if tooBig {
-      self.log("⚠️ image rendering \(scaleInfo) is expected to fail! expectedImageSize: \(expectedImageSize/(1024*1024)) MB > \(maxUseableRam/(1024*1024)) MB useable RAM", logLevel: .Debug)
+      self.debug("⚠️ image rendering \(scaleInfo) is expected to fail! expectedImageSize: \(expectedImageSize/(1024*1024)) MB > \(maxUseableRam/(1024*1024)) MB useable RAM")
     } else {
-      self.log("no expecting render issues  \(scaleInfo) expectedImageSize: \(expectedImageSize/(1024*1024)) MB, \(maxUseableRam/(1024*1024)) MB useable RAM", logLevel: .Debug)
+      self.debug("no expecting render issues  \(scaleInfo) expectedImageSize: \(expectedImageSize/(1024*1024)) MB, \(maxUseableRam/(1024*1024)) MB useable RAM")
     }
     return isProblematicSystemVersion && tooBig
   }

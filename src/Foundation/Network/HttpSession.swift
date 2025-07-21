@@ -160,6 +160,7 @@ open class HttpJob: DoesLog {
     var fn = self.filename
     if fn == nil { fn = tmppath() }
     debug("Task \(cid): downloaded \(File.basename(fn!))")
+    log("Task \(task.description): downloaded \(File.basename(fn!)) fn: \(filename ?? "-")")
     File(file).move(to: fn!)
   }
   
@@ -263,13 +264,35 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     return sess
   }
   
-  // Number of HttpSession incarnations
+  /// A serial queue to synchronize access to the static `incarnations` counter.
+  /// This ensures thread-safe increments when multiple `HttpSession` instances
+  /// are initialized concurrently.
+  ///
+  /// ⚠️ Note: We must not rely on the instance's `syncQueue` to protect access,
+  /// because `syncQueue` itself is initialized *after* `incarnations` is read.
+  /// Therefore, a dedicated static queue is used to avoid race conditions.
+  fileprivate static let incarnationQueue = DispatchQueue(label: "HttpSession.incarnations.sync")
+
+  /// A global counter used to assign a unique identifier to each `HttpSession` instance.
+  /// This is helpful for debugging and assigning unique queue names.
+  ///
+  /// ⚠️ Must be accessed only through `incarnationQueue` to avoid race conditions.
   fileprivate static var incarnations: Int = 0
-  //https://stackoverflow.com/questions/72979632/exc-bad-access-kern-invalid-address-crash-in-addoperation-of-operationqueue
-  // it's not a good idea to make it lazy, since it's not thread safe and may crash if 2 threads initialize it at the same time.
+
+  /// A dedicated serial queue used for synchronizing tasks within this `HttpSession` instance.
+  /// The queue is named using a unique suffix derived from the global `incarnations` counter.
   fileprivate var syncQueue: DispatchQueue = {
-    HttpSession.incarnations += 1
-    let qname = "HttpSession.\(HttpSession.incarnations)"
+    // Get the next unique incarnation number in a thread-safe manner
+    let number: Int = {
+      var n = 0
+      HttpSession.incarnationQueue.sync {
+        HttpSession.incarnations += 1
+        n = HttpSession.incarnations
+      }
+      return n
+    }()
+    
+    let qname = "HttpSession.\(number)"
     return DispatchQueue(label: qname)
   }()
   
@@ -330,6 +353,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
       config.networkServiceType = .background
       config.isDiscretionary = false
       config.sessionSendsLaunchEvents = true
+      config.httpMaximumConnectionsPerHost = 4//required?
       debug("get config called for background")
     }
     else {
