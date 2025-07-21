@@ -21,6 +21,9 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
   
   /// Define the menu to display on long touch of a MomentView
   public var cellLabelFont:UIFont? = UIFont.systemFont(ofSize: 11)
+  public var cellLabelActiveColor:UIColor = .white
+  public var cellLabelInActiveColor:UIColor = .gray
+  public var activeIndex = 0
   public var cellLabelLinesCount = 0
   public var titleCell:PdfOverviewCvcCell? { didSet {
     oldValue?.listenLabel.onTapping { _ in }
@@ -106,6 +109,11 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
     }
     
     if indexPath.row == 0 { titleCell = cell }
+    
+    cell.label.textColor
+    = indexPath.row == activeIndex
+    ? cellLabelActiveColor
+    : cellLabelInActiveColor
     
     cell.label.numberOfLines = self.cellLabelLinesCount
     cell.label.text = item.pageTitle
