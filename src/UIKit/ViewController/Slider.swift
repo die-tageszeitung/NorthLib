@@ -370,6 +370,84 @@ open class Slider: NSObject, DoesLog, HandleOrientation {
 open class MyButtonSlider:ButtonSlider{
   private var _contentSliderMaxWidth: CGFloat = 420.0
   
+  public override var closedBottonImageOffsetX: CGFloat {
+    get{
+      isOpen
+      ? imageOffsetXCloseX
+      : showMenuImage
+      ? imageOffsetXMenu
+      : imageOffsetXDefault
+    }
+    set{
+      if showMenuImage { imageOffsetXMenu = newValue }
+      else { imageOffsetXDefault = newValue }
+      resetConstraints()
+    }
+  }
+  
+  private var imageOffsetXDefault: CGFloat = 0.0
+  private var imageOffsetXMenu: CGFloat = 0.0
+  private var imageOffsetXCloseX: CGFloat = -30.0
+  public override var image: UIImage? {
+    set { defaultImage = newValue }
+    get { return defaultImage }
+  }
+  private var menuImage: UIImage?
+  private var defaultImage: UIImage?
+  private var closeImage: UIImage?
+  private var menuImageCoverage: CGFloat?
+  private var imageCoverage: CGFloat?
+  
+  public func setImage(_ image: UIImage?,
+                       menuImage: UIImage? = nil,
+                       closeImage: UIImage? = nil) {
+    self.image = image
+    self.menuImage = menuImage
+    self.closeImage = closeImage
+    if let img = menuImage {
+      button.setImage(img, for: .normal)
+      evaluateCoverage()
+      menuImageCoverage = coverage
+    }
+    if let img = image ?? menuImage {
+      button.setImage(img, for: .normal)
+      evaluateCoverage()
+      imageCoverage = coverage
+    }
+  }
+  
+  public func applyImage(open: Bool = false){
+    let newImage
+    = open ? closeImage
+    : showMenuImage ? menuImage : image
+    let newCoverage = showMenuImage ? menuImageCoverage : imageCoverage
+    
+    let imgWidth = (open ? closeImage : showMenuImage ? menuImage : image)?.size.width ?? 40
+    let additionalWidth = open ? 12.0 : 0.0
+
+    let leftConstr = open ? imageOffsetXCloseX : showMenuImage ? imageOffsetXMenu : imageOffsetXDefault
+    
+//    debug("altImg: \(showMenuImage) leftConstr old: \(self.leadingButtonConstraint.constant) new: \(leftConstr) self.widthButtonConstraint.constant: \(self.widthButtonConstraint.constant) shift: \(shift)")
+    
+    UIView.transition(with: button,
+                      duration: 0.3,
+                      options: .transitionCrossDissolve,
+                      animations: {
+      self.coverage = newCoverage ?? self.coverage
+      self.button.setImage(newImage, for: .normal)
+      self.leadingButtonConstraint.constant = leftConstr
+      self.widthButtonConstraint.constant = imgWidth + additionalWidth })
+  }
+  
+  public var showMenuImage: Bool = false {
+    didSet {
+      guard oldValue != showMenuImage,
+              menuImage != nil,
+            image != nil else { return }
+      applyImage(open: isOpen)
+    }
+  }
+  
   public var contentSliderMaxWidth: CGFloat {
     get {
       guard let ocoverage = ocoverage else { return _contentSliderMaxWidth }
@@ -403,6 +481,7 @@ open class MyButtonSlider:ButtonSlider{
       shiftRatio = 0.1
     }
     super.slide(toOpen: toOpen, animated: animated)
+    applyImage(open: toOpen)//fix custom constrains!
   }
   
   open func hideContentAnimated(){
@@ -417,7 +496,7 @@ open class MyButtonSlider:ButtonSlider{
  *  controller.
  */
 open class ButtonSlider: Slider {
-  private var buttonMovedOut:Bool = false
+  fileprivate var buttonMovedOut:Bool = false
   
   public var closedBottonImageOffsetX: CGFloat = 0 { didSet { resetConstraints() } }
   
@@ -456,13 +535,13 @@ open class ButtonSlider: Slider {
   public lazy var heightButtonConstraint: NSLayoutConstraint =
     button.heightAnchor.constraint(equalToConstant: 0)
   
-  private func evaluateCoverage() {
+  fileprivate func evaluateCoverage() {
     guard let img = image else { return }
     let awidth = active.view!.bounds.size.width
     let cov: CGFloat = maxCoverage ?? awidth
     coverage = min(cov, awidth - img.size.width)
   }
-  
+    
   public override func resetConstraints() {
     super.resetConstraints()
     topButtonConstraint.constant = topInset
