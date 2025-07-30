@@ -71,12 +71,6 @@ open class Sheet: VerticalSheet {
   }
   
   override func setupInvariableConstraints() {
-    let view = active.view!
-    ///shade view is required for tapRecognizer
-    pin(shadeView.top, to: view.top)
-    pin(shadeView.bottom, to: view.bottom)
-    pin(shadeView.left, to: view.left)
-    pin(shadeView.right, to: view.right)
     topConstraint.isActive = false
   }
   
@@ -92,11 +86,6 @@ open class Sheet: VerticalSheet {
       bottomConstraint.constant = coverage
     }
     bottomConstraint.isActive = true
-    
-    shadeView.alpha = 1 // important for touch events!
-    shadeView.backgroundColor = .clear // invisible
-    shadeView.isUserInteractionEnabled = true //but touchable
-    
     active.view.layoutIfNeeded()
   }
   
