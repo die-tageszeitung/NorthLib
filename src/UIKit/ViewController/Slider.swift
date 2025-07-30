@@ -287,8 +287,10 @@ open class Slider: NSObject, DoesLog, HandleOrientation {
                                                action: #selector(handleTap))
     tapRecognizer.numberOfTapsRequired = 1
     shadeView.addGestureRecognizer(tapRecognizer)
-    let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan))
-    sliderView.addGestureRecognizer(panRecognizer)
+    if !(self is Sheet){
+      let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan))
+      sliderView.addGestureRecognizer(panRecognizer)
+    }
     sliderView.addSubview(contentView)
     decorateSlider(isDecorate)
     active.view.addSubview(shadeView)
