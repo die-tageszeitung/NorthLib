@@ -93,14 +93,10 @@ open class Sheet: VerticalSheet {
     super.init(slider: slider, into: active, fromBottom: true)
     self.sidePadding = sidePadding
     if let maxWidth = maxWidth, let view = active.view {
-      for constraint in horizontalnvariableConstraints ?? [] {
-        constraint.isActive = false
-      }
       horizontalnvariableConstraints = [
         pin(sliderView.left, to: view.left, dist: sidePadding, priority: .defaultHigh),
         pin(sliderView.right, to: view.right, dist: -sidePadding, priority: .required)]
-      
-      sliderView.pinWidth(maxWidth-2*sidePadding, relation: .lessThanOrEqual, priority: .required)
+      sliderView.pinWidth(maxWidth, relation: .lessThanOrEqual, priority: .required)
     }
   }
 }
