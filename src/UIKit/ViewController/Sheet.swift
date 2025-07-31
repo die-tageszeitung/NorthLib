@@ -50,17 +50,19 @@ These constraints ensure the sheet fills the `sliderView`, minus the decorated t
 open class Sheet: VerticalSheet {
   public var xButton = Button<ImageView>()
   
-  open var sidePadding: CGFloat = 10.0
-  
   open var bgContentView : UIView { contentView }
   
   override func decorateSlider(_ isDecorate: Bool) {
     decorationHeight = 10.0
-    super.decorateSlider(isDecorate)
+    pin(contentView.left, to: sliderView.left)
+    pin(contentView.right, to: sliderView.right)
+    sliderView.layer.cornerRadius = decorationHeight/2
+    pin(contentView.bottom, to: sliderView.bottom, priority: .fittingSizeLevel)
+    pin(contentView.top, to: sliderView.top)
+    sliderView.layer.maskedCorners = [.allCorners]
     sliderView.addSubview(xButton)
     pin(xButton.right, to: sliderView.rightGuide(), dist: -12)
     pin(xButton.top, to: sliderView.topGuide(), dist: 12)
-    sliderView.layer.maskedCorners = [.allCorners]
   }
   
   public func onX(closure: @escaping ()->()) {
@@ -89,9 +91,8 @@ open class Sheet: VerticalSheet {
     active.view.layoutIfNeeded()
   }
   
-  public init(slider: UIViewController, into active: UIViewController, maxWidth:CGFloat?=nil, sidePadding: CGFloat = 10.0) {
+  public init(slider: UIViewController, into active: UIViewController, maxWidth:CGFloat?=nil, sidePadding:CGFloat) {
     super.init(slider: slider, into: active, fromBottom: true)
-    self.sidePadding = sidePadding
     if let maxWidth = maxWidth, let view = active.view {
       horizontalnvariableConstraints = [
         pin(sliderView.left, to: view.left, dist: sidePadding, priority: .defaultHigh),
