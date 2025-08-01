@@ -348,7 +348,7 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
     let config = isBackground ? 
       URLSessionConfiguration.background(withIdentifier: name) : 
       URLSessionConfiguration.default
-    log("get config called for session with name: \(name)")
+    debug("get config called for session with name: \(name)")
     if isBackground {
       config.networkServiceType = .background
       config.isDiscretionary = false
