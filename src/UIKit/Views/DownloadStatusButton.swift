@@ -8,7 +8,7 @@
 import Foundation
 import UIKit
 
-public enum DownloadStatusIndicatorState { case notStarted, process, justDone, done, waiting }
+public enum DownloadStatusIndicatorState { case notStarted, waiting, process, downloaded, read }
 
 open class DownloadStatusButton : UIView {
    
@@ -93,6 +93,7 @@ public class DownloadStatusIndicator: UIView {
 
   private var cloudImage : UIImage? = UIImage(named: "download")
   private var checkmarkImage : UIImage? = UIImage(name: "checkmark")
+  private var readImage : UIImage? = UIImage(name: "bookmark.fill")
 
   public var downloadState: DownloadStatusIndicatorState? {
     didSet{ if oldValue != downloadState { update()}}}
@@ -107,12 +108,12 @@ public class DownloadStatusIndicator: UIView {
       case .process:
         image = nil
         circleWrapper.isHidden = false
-      case .done:
+      case .downloaded:
         percent = 1.0
-        image = nil
-        circleWrapper.isHidden = true
-      case .justDone:
         image = checkmarkImage
+        circleWrapper.isHidden = true
+      case .read:
+        image = readImage
         circleWrapper.isHidden = true
       case .waiting:
         image = nil
@@ -129,12 +130,7 @@ public class DownloadStatusIndicator: UIView {
       if downloadState == .process, oldValue != percent {
         circle.progress = percent
         if percent == 1.0 {
-          downloadState = .justDone
-          onMainAfter(2.0) { [weak self] in
-            if self?.downloadState == .justDone {
-              self?.downloadState = .done
-            }
-          }
+          downloadState = .downloaded
         }
       }
     }
