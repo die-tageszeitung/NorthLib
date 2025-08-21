@@ -418,6 +418,8 @@ open class MyButtonSlider:ButtonSlider{
     }
   }
   
+  override var mainImage: UIImage? { return showMenuImage ? menuImage : image }
+  
   override public var shift: CGFloat {
     return showMenuImage ? imageOffsetXMenu : imageOffsetXDefault
   }
@@ -547,11 +549,13 @@ open class ButtonSlider: Slider {
     let cov: CGFloat = maxCoverage ?? awidth
     coverage = min(cov, awidth - img.size.width)
   }
+  
+  var mainImage: UIImage? { return image }
     
   public override func resetConstraints() {
     super.resetConstraints()
     topButtonConstraint.constant = topInset
-    if let img = image {
+    if let img = mainImage {
       widthButtonConstraint.constant = img.size.width - closedBottonImageOffsetX
       heightButtonConstraint.constant = img.size.height
     }
