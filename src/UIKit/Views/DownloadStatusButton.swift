@@ -10,6 +10,11 @@ import UIKit
 
 public enum DownloadStatusIndicatorState { case notStarted, waiting, process, downloaded, read }
 
+extension DownloadStatusIndicatorState {
+  public var canOpen: Bool { return self == .downloaded || self == .read }
+}
+  
+
 open class DownloadStatusButton : UIView {
    
   private var indicatorHeight:CGFloat = 28.0
@@ -109,7 +114,6 @@ public class DownloadStatusIndicator: UIView {
         image = nil
         circleWrapper.isHidden = false
       case .downloaded:
-        percent = 1.0
         image = checkmarkImage
         circleWrapper.isHidden = true
       case .read:
@@ -129,9 +133,6 @@ public class DownloadStatusIndicator: UIView {
     didSet {
       if downloadState == .process, oldValue != percent {
         circle.progress = percent
-        if percent == 1.0 {
-          downloadState = .downloaded
-        }
       }
     }
   }
