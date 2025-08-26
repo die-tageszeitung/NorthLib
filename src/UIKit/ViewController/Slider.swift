@@ -389,7 +389,7 @@ open class MyButtonSlider:ButtonSlider{
   
   private var imageOffsetXDefault: CGFloat = 0.0
   private var imageOffsetXMenu: CGFloat = 0.0
-  private var imageOffsetXCloseX: CGFloat = -30.0
+  private var imageOffsetXCloseX: CGFloat = -24.0
   public override var image: UIImage? {
     set { defaultImage = newValue }
     get { return defaultImage }
@@ -431,9 +431,11 @@ open class MyButtonSlider:ButtonSlider{
     let newCoverage = showMenuImage ? menuImageCoverage : imageCoverage
     
     let imgWidth = (open ? closeImage : showMenuImage ? menuImage : image)?.size.width ?? 40
-    let additionalWidth = open ? 12.0 : 0.0
+    let additionalWidth = open ? 2.0 : 0.0
 
     let leftConstr = open ? imageOffsetXCloseX : showMenuImage ? imageOffsetXMenu : imageOffsetXDefault
+    
+    self.button.adjustsImageWhenHighlighted = newImage == image///only adjust taz logo color
     
 //    debug("altImg: \(showMenuImage) leftConstr old: \(self.leadingButtonConstraint.constant) new: \(leftConstr) self.widthButtonConstraint.constant: \(self.widthButtonConstraint.constant) shift: \(shift)")
     
