@@ -98,7 +98,7 @@ public class DownloadStatusIndicator: UIView {
 
   private var cloudImage : UIImage? = UIImage(named: "download")
   private var checkmarkImage : UIImage? = UIImage(name: "checkmark")
-  private var readImage : UIImage? = UIImage(name: "bookmark.fill")
+  private var readImage : UIImage? = UIImage(named: "bookmark")
 
   public var downloadState: DownloadStatusIndicatorState? {
     didSet{ if oldValue != downloadState { update()}}}
@@ -143,12 +143,17 @@ public class DownloadStatusIndicator: UIView {
       imageWrapper.image = image?.withTintColor(color, renderingMode: .alwaysOriginal)
       switch image {
         case cloudImage:
-          imageYConstraint?.constant = 3.2
-          imageHeightRatio = 0.78
+          imageYConstraint?.constant = 2.0
+          imageHeightRatio = 0.73
         case checkmarkImage:
           imageYConstraint?.constant = 0.0
           imageHeightRatio = 0.7
+        case readImage:
+          imageYConstraint?.constant = 0.0
+          imageHeightRatio = 0.7
         default:
+          imageYConstraint?.constant = 0.0
+          imageHeightRatio = 1.0
           break;
       }
     }
