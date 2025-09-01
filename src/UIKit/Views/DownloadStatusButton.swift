@@ -97,7 +97,7 @@ public class DownloadStatusIndicator: UIView {
   = 1.0 { didSet { circleYConstraint?.constant = circleOffsetY }}
 
   private var cloudImage : UIImage? = UIImage(named: "download")
-  private var checkmarkImage : UIImage? = UIImage(name: "checkmark")
+  private var checkmarkImage : UIImage? = UIImage(named: "checkmark")?.withRenderingMode(.alwaysOriginal)
   private var readImage : UIImage? = UIImage(named: "bookmark")
 
   public var downloadState: DownloadStatusIndicatorState? {
@@ -140,7 +140,13 @@ public class DownloadStatusIndicator: UIView {
   public var image : UIImage? {
     didSet {
       if imageWrapper.image == image { return }
-      imageWrapper.image = image?.withTintColor(color, renderingMode: .alwaysOriginal)
+      if image == checkmarkImage {
+        imageWrapper.image = image
+      }
+      else {
+        imageWrapper.image = image?.withTintColor(color, renderingMode: .alwaysOriginal)
+      }
+      
       switch image {
         case cloudImage:
           imageYConstraint?.constant = 2.0
