@@ -393,7 +393,6 @@ extension ZoomedImageView{
   
   func doUpdateMinimumZoomScale(){
     updateMinimumZoomScale()
-    zoomOutAndCenter()
   }
   
   // MARK: updateMinimumZoomScale
