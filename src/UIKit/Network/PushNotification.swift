@@ -379,6 +379,8 @@ open class StatusBar: UIScrollView, UIScrollViewDelegate, HandleOrientation {
 /// A Protocol indicating that a view controller may be rotated.
 public protocol CanRotate {}
 
+public protocol CanRotateFromUnderlying {}
+
 /// An AppDelegate that handles notifications and status bars
 open class NotifiedDelegate: UIResponder, UIApplicationDelegate, 
            UIScrollViewDelegate, DoesLog {
@@ -445,6 +447,9 @@ open class NotifiedDelegate: UIResponder, UIApplicationDelegate,
     window: UIWindow?) -> UIInterfaceOrientationMask {
     let topVc = topViewController(in: window?.rootViewController)
     if topVc is CanRotate {
+      return .allButUpsideDown
+    }
+    else if topVc is CanRotateFromUnderlying && topVc?.navigationController?.viewControllers.last is CanRotate {
       return .allButUpsideDown
     }
     else if ((topVc?.presentingViewController as? UITabBarController)?.selectedViewController as? NavigationController)?.topViewController is CanRotate {
