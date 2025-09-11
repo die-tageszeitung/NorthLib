@@ -160,7 +160,7 @@ open class HttpJob: DoesLog {
     var fn = self.filename
     if fn == nil { fn = tmppath() }
     debug("Task \(cid): downloaded \(File.basename(fn!))")
-    log("Task \(task.description): downloaded \(File.basename(fn!)) fn: \(filename ?? "-")")
+//    log("Task \(task.description): downloaded \(File.basename(fn!)) fn: \(filename ?? "-")")
     File(file).move(to: fn!)
   }
   
