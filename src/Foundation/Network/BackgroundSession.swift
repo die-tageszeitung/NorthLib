@@ -130,6 +130,13 @@ fileprivate class DownloadTaskStore: DoesLog {
       return _tasks.first { $0.id == id }
     }
   }
+  
+  func get(item withUrl: String) -> DownloadTaskData? {
+    return queue.sync { [weak self] in
+      guard let self = self else { return nil }
+      return _tasks.first { $0.url == withUrl }
+    }
+  }
 }
 
 /// One BackgroundSession is used to download files (optionally unzipping it)
@@ -244,6 +251,11 @@ open class BackgroundSession: HttpSession {
     tasks = []
     session.invalidateAndCancel()
     debug("Invalidated session \(name)")
+  }
+  
+  public static func removeActiveDownload(for url: String) {
+    guard let dtd = _shared?.taskStore.get(item: url) else { return }
+    _shared?.taskStore.remove(task: dtd)
   }
   
   /// Factory method returning an already defined session (if it has been previously created)
