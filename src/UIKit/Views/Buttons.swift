@@ -437,6 +437,9 @@ open class ButtonControl: UIControl {
   open func barButton() -> UIBarButtonItem {
     let bb = UIBarButtonItem()
     bb.customView = self
+    if #available(iOS 26.0, *) {
+      bb.hidesSharedBackground = true
+    }
     return bb
   }
   
