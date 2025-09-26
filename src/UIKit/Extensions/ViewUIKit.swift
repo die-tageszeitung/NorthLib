@@ -80,6 +80,14 @@ public extension UIView {
 
 /// A UIView extension to show/hide views animated
 public extension UIView {
+  func toggleAnimated(duration:CGFloat=0.3, completion: (()->())? = nil){
+    isHidden
+    ? showAnimated(duration: duration, completion: completion)
+    : hideAnimated(duration: duration, completion: completion)
+  }
+             
+  
+  
   func showAnimated(duration:CGFloat=0.3, completion: (()->())? = nil){
     if isHidden == false { completion?(); return }
     onMain { [weak self] in
@@ -336,10 +344,10 @@ public extension UIView {
   
   /// Centers x axis to superviews x axis
   @discardableResult
-  func centerX(_ priority: UILayoutPriority? = nil) -> NSLayoutConstraint? {
+  func centerX(dist: CGFloat = 0, _ priority: UILayoutPriority? = nil) -> NSLayoutConstraint? {
     translatesAutoresizingMaskIntoConstraints = false
     guard let sv = self.superview else { return nil }
-    return pin(self.centerX, to: sv.centerX, priority: priority)
+    return pin(self.centerX, to: sv.centerX, dist: dist, priority: priority)
   }
   
   /// Centers y axis to superviews y axis
