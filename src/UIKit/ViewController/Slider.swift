@@ -27,7 +27,7 @@ open class Slider: NSObject, DoesLog, HandleOrientation {
   /// currently active view controller to slide into
   public fileprivate(set) var active: UIViewController
   /// view controller being slid in
-  var slider: UIViewController
+  public fileprivate(set) var slider: UIViewController
   /// Horizontal or vertical slide (from top or bottom)
   var isHorizontal: Bool
   /// Slide from default edge (left in horizontal and bottom in vertical slide mode)
