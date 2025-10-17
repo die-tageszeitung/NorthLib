@@ -26,9 +26,12 @@ public class MenuActions {
       if let icon = m.icon {
         img = UIImage(name: icon) ?? UIImage(named: icon)
       }
+      var attributes: UIMenuElement.Attributes = []
+      if m.icon == "trash" { attributes.insert(.destructive)}
+      if m.enabled == false { attributes.insert(.disabled)}
       subItems.append(UIAction(title: m.title,
                                image:img,
-                               attributes: m.enabled == false ? .disabled : []
+                               attributes: attributes
                               ) { [weak self] _ in
         m.closure(self)
       })
