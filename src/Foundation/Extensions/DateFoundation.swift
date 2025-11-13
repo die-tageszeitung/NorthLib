@@ -25,7 +25,7 @@ public extension Date {
   /// Returns a String as ISO-Date/Time, ie. "YYYY-MM-DD hh:mm:ss"
   func isoTime(tz: String? = nil) -> String {
     let dc = components(tz: tz)
-    return String(format: "%04d-%02d-%02d %02d:%02d:%02d.%06d", dc.year!, dc.month!,
+    return String(format: "%04d-%02d-%02d %02d:%02d:%02d", dc.year!, dc.month!,
                   dc.day!, dc.hour!, dc.minute!, dc.second!)
   }
  
