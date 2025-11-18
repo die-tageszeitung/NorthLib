@@ -28,6 +28,24 @@ extension DoesLog {
 */ 
 public class Log {
   
+  public enum ApplicationStartContext:String {
+  //  case backgroundTask = "backgroundTask"
+    case handlePushNotification  = "PN"
+    case foregroundUserStarted = "FG"
+    //    case foregroundUserResume
+  //  case backgroundFetch = "backgroundFetch"
+    case unknown = "??"
+    case unset = "-"
+    var description: String { rawValue }
+  }
+  
+  public static var appStartContext: ApplicationStartContext = .unset {
+    didSet {
+      guard oldValue != appStartContext else { return }
+      Log.log("⚠️ Application start context set to \(appStartContext.description) former: \(oldValue.description)")
+    }
+  }
+  
   /// class2s returns the classname of the passed object
   static func class2s(_ object: Any?) -> String? {
     var cn: String? = nil
@@ -110,7 +128,7 @@ public class Log {
     
     /// toString returns a minimalistic string representing the current message
     public func toString() -> String {
-      var s = "(\(onMainThread ? "M" : "T")\(serialNumber) \(tstamp.toString())) "
+      var s = "(\(Log.appStartContext.description)|\(onMainThread ? "M" : "T")\(serialNumber) \(tstamp.toString())) "
       if let cn = className { s += cn + "." }
       s += "\(funcName) \(logLevel)"
       if isException { s += " Exception" }
