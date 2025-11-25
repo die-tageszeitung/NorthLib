@@ -12,6 +12,13 @@ public enum DownloadStatusIndicatorState { case notStarted, waiting, process, do
 
 extension DownloadStatusIndicatorState {
   public var canOpen: Bool { return self == .downloaded || self == .read }
+  public var statusText: String {
+    switch self {
+      case .notStarted, .waiting, .process: return "nicht geladen"
+      case .downloaded: return "geladen"
+      case .read: return "weiterlesen"
+    }
+  }
 }
   
 

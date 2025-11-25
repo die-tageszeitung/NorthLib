@@ -789,7 +789,8 @@ open class HttpLoader: ToString, DoesLog {
   public func toString() -> String {
     var ret = "downloaded: \(downloaded), "
     ret += "available: \(available), "
-    ret += "err: \(errors)"
+    ret += "err: \(errors), "
+    ret += "targetDir: \(toDir.lastPathComponent)"
     if downloaded > 0 { ret += ", DL size: \(downloadSize)" }
     return ret
   }
