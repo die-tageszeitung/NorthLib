@@ -10,7 +10,7 @@
 import NorthLowLevel
 
 /// String conforms to Error and can thus be thrown:
-extension String: Error {}
+extension String: @retroactive Error {}
 
 /// String extension supporting subscripts with Int and Int-Ranges.
 public extension String {

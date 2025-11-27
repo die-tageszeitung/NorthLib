@@ -8,5 +8,5 @@
 import UIKit
 
 /// Common UIKit types adopting DoesLog to perform logging
-extension UIView: DoesLog {}
-extension UIViewController: DoesLog {}
+extension UIView: @retroactive DoesLog {}
+extension UIViewController: @retroactive DoesLog {}
