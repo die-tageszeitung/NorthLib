@@ -175,6 +175,8 @@ open class PageCollectionVC: UIViewController {
   public lazy var leftTapEnEdgeButton: UIView = {
     let btn = UIView()
     btn.pinWidth(tapEnEdgeButtonWidth)
+    btn.isAccessibilityElement = true
+    btn.accessibilityLabel = "Vorherigen Artikel"
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
@@ -187,6 +189,8 @@ open class PageCollectionVC: UIViewController {
   public lazy var rightTapEnEdgeButton: UIView = {
     let btn = UIView()
     btn.pinWidth(tapEnEdgeButtonWidth)
+    btn.isAccessibilityElement = true
+    btn.accessibilityLabel = "Nächsten Artikel"
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
@@ -198,7 +202,8 @@ open class PageCollectionVC: UIViewController {
   }()
     
   public func updateTapArea(){
-    if edgeTapToNavigate == false || preventEdgeTapToNavigate == true {
+    if (edgeTapToNavigate == false || preventEdgeTapToNavigate == true)
+    && UIAccessibility.isVoiceOverRunning == false {
       leftTapEnEdgeButton.isHidden = true
       rightTapEnEdgeButton.isHidden = true
       return

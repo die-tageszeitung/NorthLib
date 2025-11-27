@@ -61,6 +61,8 @@ class OptionalWebView: OptionalView, DoesLog {
     
     self.webView = WebView(frame: .zero, configuration: config)
     guard let webView = self.webView else { return }
+    webView.accessibilityViewIsModal = false
+    webView.isAccessibilityElement = false
     webView.backgroundColor = UIColor.clear
     webView.scrollView.backgroundColor = UIColor.clear
     webView.allowsBackForwardNavigationGestures = false
@@ -244,6 +246,7 @@ open class WebViewCollectionVC: PageCollectionVC {
   }
   
   open func handleRightTap() -> Bool{
+    if UIAccessibility.isVoiceOverRunning { return false }
     guard let sv = self.currentWebView?.scrollView,
           sv.contentOffset.y + 2 + sv.frame.size.height < sv.contentSize.height
     else { return false }
@@ -255,6 +258,7 @@ open class WebViewCollectionVC: PageCollectionVC {
   }
   
   open func handleLeftTap() -> Bool{
+    if UIAccessibility.isVoiceOverRunning { return false }
     guard let sv = self.currentWebView?.scrollView,
     sv.contentOffset.y - 2 > 0
     else { return false }
