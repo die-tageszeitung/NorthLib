@@ -176,13 +176,16 @@ open class PageCollectionVC: UIViewController {
     let btn = UIView()
     btn.pinWidth(tapEnEdgeButtonWidth)
     btn.isAccessibilityElement = true
-    btn.accessibilityLabel = "Vorherigen Artikel"
+    btn.accessibilityLabel = "zurück"
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
       if self?.onLeftTapClosure?() == true { return }
       guard let idx = self?.index, idx > 0 else { return }
       self?.collectionView?.scrollto(idx-1, animated: true)
+      guard UIAccessibility.isVoiceOverRunning else { return }
+      self?.leftTapEnEdgeButton.accessibilityLabel = nil
+      onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.leftTapEnEdgeButton)}
     }
     return btn
   }()
@@ -190,13 +193,16 @@ open class PageCollectionVC: UIViewController {
     let btn = UIView()
     btn.pinWidth(tapEnEdgeButtonWidth)
     btn.isAccessibilityElement = true
-    btn.accessibilityLabel = "Nächsten Artikel"
+    btn.accessibilityLabel = "weiter"
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
       if self?.onRightTapClosure?() == true { return }
       guard let idx = self?.index else { return }
       self?.collectionView?.scrollto(idx+1, animated: true)
+      guard UIAccessibility.isVoiceOverRunning else { return }
+      self?.rightTapEnEdgeButton.accessibilityLabel = nil
+      onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.rightTapEnEdgeButton)}
     }
     return btn
   }()
