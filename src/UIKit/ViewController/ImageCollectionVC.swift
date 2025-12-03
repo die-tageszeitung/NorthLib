@@ -140,6 +140,7 @@ extension ImageCollectionVC {
 extension ImageCollectionVC {
   func prepareCollectionView() {
     self.collectionView?.backgroundColor = UIColor.black
+    self.collectionView?.isAccessibilityElement = false
     self.collectionView?.showsHorizontalScrollIndicator = false
     self.collectionView?.showsVerticalScrollIndicator = false
     self.pinTopToSafeArea = false

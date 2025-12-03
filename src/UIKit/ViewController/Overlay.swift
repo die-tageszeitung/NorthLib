@@ -49,7 +49,7 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
   private var onCloseHandler: (() -> ())?
   
   var shadeView: UIView?
-  var overlayVC: UIViewController
+  public private(set) var overlayVC: UIViewController
   var activeVC: UIViewController
   
   public var overlayView: UIView?
@@ -197,7 +197,7 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
   }
     
   // MARK: open animated
-  public func open(animated: Bool, fromBottom: Bool) {
+  public func open(animated: Bool, fromBottom: Bool, completion: (() -> Void)? = nil) {
     addToActiveVC()
     closeAction = { self.close(animated: animated, toBottom: fromBottom) }
     guard animated,
@@ -213,7 +213,7 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       targetSnapshot.frame = activeVC.view.frame
       targetSnapshot.frame.origin.y += targetSnapshot.frame.size.height
     }
-    
+    overlayVC.view.accessibilityViewIsModal = true
     overlayVC.view.isHidden = true
     overlayView?.addSubview(targetSnapshot)
     shadeView?.alpha = 0.0
@@ -227,6 +227,8 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
     }) { (success) in
       self.overlayVC.view.isHidden = false
       targetSnapshot.removeFromSuperview()
+      UIAccessibility.post(notification: .layoutChanged,   argument: self.overlayVC.view)
+      onMainAfter { completion?() }
     }
   }
   

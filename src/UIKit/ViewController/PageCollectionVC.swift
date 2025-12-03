@@ -177,6 +177,7 @@ open class PageCollectionVC: UIViewController {
     btn.pinWidth(tapEnEdgeButtonWidth)
     btn.isAccessibilityElement = true
     btn.accessibilityLabel = "zurück"
+    btn.accessibilityTraits = .button
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
@@ -194,6 +195,7 @@ open class PageCollectionVC: UIViewController {
     btn.pinWidth(tapEnEdgeButtonWidth)
     btn.isAccessibilityElement = true
     btn.accessibilityLabel = "weiter"
+    btn.accessibilityTraits = .button
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
@@ -206,7 +208,9 @@ open class PageCollectionVC: UIViewController {
     }
     return btn
   }()
-    
+  
+  public var defaultAccessibilityView:UIView?
+  
   public func updateTapArea(){
     if (edgeTapToNavigate == false || preventEdgeTapToNavigate == true)
     && UIAccessibility.isVoiceOverRunning == false {
@@ -218,7 +222,31 @@ open class PageCollectionVC: UIViewController {
     leftTapEnEdgeButton.isHidden = false
     rightTapEnEdgeButton.isHidden = false
     
-    leftTapEnEdgeButton.backgroundColor 
+    let isFirst = index == 0
+    let isLast  = index == count - 1
+    
+    // focus-update (nur wenn nötig)
+    let focusTarget: Any? =
+    isFirst ? rightTapEnEdgeButton :
+    isLast  ? leftTapEnEdgeButton : defaultAccessibilityView ?? self.collectionView
+    
+    if let target = focusTarget {
+      UIAccessibility.post(notification: .layoutChanged, argument: target)
+    }
+    
+    if isFirst {
+      leftTapEnEdgeButton.accessibilityTraits.insert(.notEnabled)
+    } else {
+      leftTapEnEdgeButton.accessibilityTraits.remove(.notEnabled)
+    }
+    
+    if isLast {
+      rightTapEnEdgeButton.accessibilityTraits.insert(.notEnabled)
+    } else {
+      rightTapEnEdgeButton.accessibilityTraits.remove(.notEnabled)
+    }
+    
+    leftTapEnEdgeButton.backgroundColor
     = edgeTapToNavigateVisible2
     ? UIColor.gray.withAlphaComponent(0.15)
     : .clear

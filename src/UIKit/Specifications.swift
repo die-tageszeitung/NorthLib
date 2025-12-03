@@ -192,7 +192,7 @@ public extension ImageCollectionVCSpec {
     self.view.addSubview(xButton)
     pin(xButton.right, to: self.view.rightGuide(), dist: -15)
     pin(xButton.top, to: self.view.topGuide(), dist: 15)
-    xButton.isHidden = true
+    xButton.isHidden = UIAccessibility.isVoiceOverRunning == false
   }
   
   /// An example of setting up the PageControl
@@ -267,7 +267,7 @@ public protocol OverlaySpec {
   
   /// open the overlay view controller, ie. present it optionally with an
   /// animation: from the center by default or fromBottom
-  func open(animated: Bool, fromBottom: Bool)
+  func open(animated: Bool, fromBottom: Bool, completion: (() -> Void)?)
   
   /// close the overlay, optionally animated (same type as opening)
   func close(animated: Bool)

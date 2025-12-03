@@ -86,12 +86,22 @@ public extension UIView {
     : hideAnimated(duration: duration, completion: completion)
   }
              
+  static var voiceOverFocusedElement: UIView? {
+    guard UIAccessibility.isVoiceOverRunning else { return nil }
+    return UIAccessibility.focusedElement(using: .notificationVoiceOver) as? UIView
+  }
   
+  var isVoiceOverFocusedElement: Bool {
+    guard UIAccessibility.isVoiceOverRunning else { return false }
+    guard isAccessibilityElement else { return false }
+    guard let focusedElement = UIAccessibility.focusedElement(using: .notificationVoiceOver) as? UIView else { return false }
+    return self == focusedElement
+  }
   
   func showAnimated(duration:CGFloat=0.3, completion: (()->())? = nil){
     if isHidden == false { completion?(); return }
     onMain { [weak self] in
-      self?.alpha = 0.0
+      self?.alpha = 0.01
       self?.isHidden = false
       UIView.animate(withDuration: TimeInterval(duration)) {[weak self] in
         self?.alpha = 1.0
@@ -104,10 +114,11 @@ public extension UIView {
   func hideAnimated(duration:CGFloat=0.3, completion: (()->())? = nil){
     if isHidden == true { return }///do not call compleetion this causes an error in bookmarks revert double toggle!
     onMain { [weak self] in
+      if self?.isVoiceOverFocusedElement == true { self?.log("WARNING: App will loose VoiceOver focus")}
       UIView.animate(withDuration: TimeInterval(duration)) {[weak self] in
         self?.alpha = 0.0
       } completion: { [weak self] _ in
-        self?.isHidden = true
+        self?.isHidden = true///at least here VO focus will be lost!
         self?.alpha = 1.0
         completion?()
       }
