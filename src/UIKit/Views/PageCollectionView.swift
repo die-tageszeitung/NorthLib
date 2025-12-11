@@ -170,7 +170,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   }
   
   fileprivate var _index: Int?
-  fileprivate var isInitialized = false
+  public fileprivate(set) var isInitialized = false
   fileprivate var initialIndex: Int? = nil
   fileprivate var collectionViewInitialized = false
   
