@@ -48,7 +48,10 @@ import SystemConfiguration
  }
  ````
  */
-open class NetAvailability {
+open class NetAvailability: DoesLog {
+  
+  @Default("debuggingSwitchOne")
+  public var debuggingSwitchOne: Bool
   
   // destination to test for reachability
   private var destination: SCNetworkReachability
@@ -95,28 +98,83 @@ open class NetAvailability {
   
   /// Check for general network availability
   required public init(_ destination: SCNetworkReachability? = nil) {
-    if let destination = destination { self.destination = destination }
-    else {
-      var addr = sockaddr()
-      addr.sa_len = UInt8(MemoryLayout<sockaddr>.size)
-      addr.sa_family = sa_family_t(AF_INET)
-      self.destination = SCNetworkReachabilityCreateWithAddress(nil, &addr)!
+    // set reachability destination or create a new one for 0.0.0.0 / dual stack!
+    if let destination = destination {
+      self.destination = destination
+    } else {
+      // try IPv6 any (::)
+      var addr6 = sockaddr_in6()
+      addr6.sin6_len = UInt8(MemoryLayout<sockaddr_in6>.size)
+      addr6.sin6_family = sa_family_t(AF_INET6)
+      addr6.sin6_addr = in6addr_any
+      
+      let reachability6 = withUnsafePointer(to: &addr6) {
+        $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+          SCNetworkReachabilityCreateWithAddress(nil, $0)
+        }
+      }
+      
+      if let dest6 = reachability6 {
+        self.destination = dest6
+      } else {
+        // fallback: IPv4 any (0.0.0.0) ----------
+        var addr4 = sockaddr_in()
+        addr4.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        addr4.sin_family = sa_family_t(AF_INET)
+        addr4.sin_addr = in_addr(s_addr: 0)
+        
+        let reachability4 = withUnsafePointer(to: &addr4) {
+          $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+            SCNetworkReachabilityCreateWithAddress(nil, $0)
+          }
+        }
+        guard let dest4 = reachability4 else {
+          fatalError("NetAvailability: Could not create SCNetworkReachability for IPv4 or IPv6")
+        }
+        self.destination = dest4
+      }
     }
-    var fl = SCNetworkReachabilityFlags()
-    SCNetworkReachabilityGetFlags(self.destination, &fl)
-    self.lastFlags = fl
-    let callback: SCNetworkReachabilityCallBack = { (reachability,flags,info) in
-      guard let info = info else { return }      
+    
+    // initial flags
+    var flags = SCNetworkReachabilityFlags()
+    if SCNetworkReachabilityGetFlags(self.destination, &flags) {
+      self.lastFlags = flags
+    } else {
+      self.lastFlags = []
+      log("NetAvailability: Initial flags unavailable", logLevel: .Error)
+    }
+    
+    let callback: SCNetworkReachabilityCallBack = { _, newFlags, info in
+      guard let info = info else { return }
       let net = Unmanaged<NetAvailability>.fromOpaque(info).takeUnretainedValue()
-      net.changeCallback(flags: flags)
-      net.lastFlags = flags
+      net.changeCallback(flags: newFlags)
+      net.lastFlags = newFlags
     }
-    var context = SCNetworkReachabilityContext(version: 0, info: nil, retain: nil, release: nil, 
-                    copyDescription: nil)
-    context.info = UnsafeMutableRawPointer(Unmanaged<NetAvailability>.passUnretained(self).toOpaque())
-    SCNetworkReachabilitySetCallback(self.destination, callback, &context)
-    let current = OperationQueue.current?.underlyingQueue
-    SCNetworkReachabilitySetDispatchQueue(self.destination, current!)
+    
+    var context = SCNetworkReachabilityContext(
+      version: 0,
+      info: UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque()),
+      retain: nil,
+      release: nil,
+      copyDescription: nil
+    )
+    
+    if !SCNetworkReachabilitySetCallback(self.destination, callback, &context) {
+      log("NetAvailability: SCNetworkReachabilitySetCallback failed", logLevel: .Error)
+    }
+    
+    // for testing only: if it work maybe change to optional destination
+    if debuggingSwitchOne == true { return }
+    
+    // set dispatch queue
+    guard let currentQueue = OperationQueue.current?.underlyingQueue else {
+      log("NetAvailability: No underlyingQueue available – not setting dispatch queue", logLevel: .Error)
+      return
+    }
+    
+    if !SCNetworkReachabilitySetDispatchQueue(self.destination, currentQueue) {
+      log("NetAvailability: SCNetworkReachabilitySetDispatchQueue failed", logLevel: .Error)
+    }
   }
   
   // deinit removes the callback
