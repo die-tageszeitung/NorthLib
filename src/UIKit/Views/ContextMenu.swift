@@ -67,6 +67,8 @@ open class ContextMenu: NSObject, UIContextMenuInteractionDelegate {
   
   /// The view on which to show the context menu
   public var view: UIView
+  /// optional title for menu
+  public var title: String?
   ///by default the UITargetedPreview animates from real size to ScreenFitting Size
   ///for a large image view in a scroll view, this can lead to an abnormal animation/behaviour
   public var smoothPreviewForImage: Bool = false
@@ -77,8 +79,9 @@ open class ContextMenu: NSObject, UIContextMenuInteractionDelegate {
   public var argument: Any? = nil
   
   /// Initialize with a view on which to define the context menu  
-  public init(view: UIView, smoothPreviewForImage: Bool = false) {
+  public init(view: UIView, title: String? = nil, smoothPreviewForImage: Bool = false) {
     self.view = view
+    self.title = title
     self.smoothPreviewForImage = smoothPreviewForImage
     super.init()
   }
@@ -108,7 +111,7 @@ open class ContextMenu: NSObject, UIContextMenuInteractionDelegate {
         m.closure(self?.argument)
       }
     }
-    return UIMenu(title: "", children: menuItems)
+    return UIMenu(title: title ?? "", children: menuItems)
   }
   /// Add an additional menu item
   public func addMenuItem(title: String, icon: String,
