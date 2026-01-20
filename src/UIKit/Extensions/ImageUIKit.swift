@@ -147,4 +147,21 @@ extension UIImage {
       
       return resizedImage
   }
+  
+  public func rotated90Degrees() -> UIImage? {
+      let newSize = CGSize(width: size.height, height: size.width)
+      UIGraphicsBeginImageContextWithOptions(newSize, false, scale)
+      guard let context = UIGraphicsGetCurrentContext() else { return nil }
+
+      context.translateBy(x: newSize.width / 2, y: newSize.height / 2)
+      context.rotate(by: .pi / 2)
+      draw(in: CGRect(x: -size.width / 2,
+                       y: -size.height / 2,
+                       width: size.width,
+                       height: size.height))
+
+      let rotatedImage = UIGraphicsGetImageFromCurrentImageContext()
+      UIGraphicsEndImageContext()
+      return rotatedImage
+  }
 }
