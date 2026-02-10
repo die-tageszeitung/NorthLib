@@ -756,9 +756,9 @@ open class VerticalSheet: Slider {
     let firstResponder = UIResponder.first
     var view: UIView? = firstResponder as? UITextField
     if view == nil { view = firstResponder as? UITextView }
-    if let view = view {
+    if let view = view, let window = UIWindow.activeKeyWindow {
       var textFrame = view.frame
-      textFrame = UIWindow.keyWindow!.convert(textFrame, from: view.superview)
+      textFrame = window.convert(textFrame, from: view.superview)
       debug("keyboardFrame: \(keyboardFrame), textFrame: \(textFrame)")
       let kbY = keyboardFrame.origin.y
       let tY = textFrame.origin.y + textFrame.size.height

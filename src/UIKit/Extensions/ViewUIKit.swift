@@ -55,6 +55,7 @@ public extension UIView {
 /// A UIView extension to check visibility of a view
 public extension UIView {
   /// Return whether view is visible somewhere on the screen
+  #warning("May not work as expected for multiple UIScene ")
   var isVisible: Bool { self.window != nil && !self.isHidden }
 }
 

@@ -147,7 +147,7 @@ open class VCTable: UIViewController, UITableViewDelegate,
     let recog = UILongPressGestureRecognizer(target: self,
         action: #selector(displayMenue))
     recog.numberOfTouchesRequired = 2
-    let win = UIWindow.keyWindow
+    let win = UIWindow.activeKeyWindow
     win?.isUserInteractionEnabled = true
     win?.addGestureRecognizer(recog)
   }

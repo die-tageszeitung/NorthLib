@@ -322,12 +322,12 @@ open class StatusBar: UIScrollView, UIScrollViewDelegate, HandleOrientation {
   
   /// Frame of real status bar
   public static var realFrame: CGRect {
-    UIWindow.keyWindow?.windowScene?.statusBarManager?.statusBarFrame ?? CGRect.zero
+    UIWindow.activeKeyWindow?.windowScene?.statusBarManager?.statusBarFrame ?? CGRect.zero
   }
   
   /// Returns true if the real status bar is hidden
   public static var isHidden: Bool { 
-    return UIViewController.keyWindow?.windowScene?.statusBarManager?
+    return UIWindow.activeKeyWindow?.windowScene?.statusBarManager?
       .isStatusBarHidden ?? true
   }
   

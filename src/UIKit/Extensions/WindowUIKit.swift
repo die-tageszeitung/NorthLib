@@ -11,27 +11,27 @@ import UIKit
 public extension UIWindow {
 
   /// Returns the key window
-  static var keyWindow: UIWindow? {
-    return UIApplication.shared.windows.first{ $0.isKeyWindow } ?? UIApplication.shared.windows.first
+  static var activeKeyWindow: UIWindow? {
+    return UIApplication.shared.activeKeyWindow
   }
   
   /// Returns the root view controller
-  static var rootVC: UIViewController? { return keyWindow?.rootViewController }
+  static var rootVC: UIViewController? { return activeKeyWindow?.rootViewController }
   
   /// Returns a snapshot of the key window
-  static var snapshot: UIImage? { return keyWindow?.snapshot }
+  static var snapshot: UIImage? { return activeKeyWindow?.snapshot }
   
   /// Returns a screenshot (ie. snapshot) of the key window
   static var screenshot: UIImage? { return snapshot }
   
   /// Returns the top inset of the window (ie. nodge area)
   static var topInset: CGFloat {
-    return keyWindow?.safeAreaInsets.top ?? 0
+    return activeKeyWindow?.safeAreaInsets.top ?? 0
   }
   
   /// Returns the bottom inset of the window
   static var bottomInset: CGFloat {
-    return keyWindow?.safeAreaInsets.bottom ?? 0
+    return activeKeyWindow?.safeAreaInsets.bottom ?? 0
   }
   
   /// Returns the max inset for all edges
@@ -58,12 +58,12 @@ public extension UIWindow {
   
   /// Returns safe area Insets inset of the window
   static var safeInsets: UIEdgeInsets {
-    return keyWindow?.safeAreaInsets ?? .zero
+    return activeKeyWindow?.safeAreaInsets ?? .zero
   }
   
   /// Returns size the key window otherwise screen size
   static var size: CGSize {
-    if let window = keyWindow {
+    if let window = activeKeyWindow {
       return window.frame.size
     }
     return UIScreen.main.bounds.size
@@ -86,20 +86,26 @@ public extension UIWindow {
     return max(s.width, s.height)
   }
   
-  /// check if current window's width is smaller than its height
+  /// Checks if the current active window is portrait by geometry
   static var isPortrait: Bool {
-    let s = size
-    return s.height > s.width
+    guard let window = activeKeyWindow else { return true }
+    return window.bounds.height >= window.bounds.width
   }
   
-  /// check if current window's width is larger than its height
-  static var isLandscape: Bool { !UIWindow.isPortrait }
+  /// Checks if the current active window is landscape by geometry
+  static var isLandscape: Bool {
+    !isPortrait
+  }
   
+  /// Checks landscape based on the Scene's interface orientation
   static var isLandscapeInterface: Bool {
-    guard let io = UIWindow.keyWindow?.windowScene?.interfaceOrientation else {
-      return isLandscape
+    guard
+      let scene = activeKeyWindow?.windowScene
+    else {
+      return isLandscape   // geometry fallback
     }
-    switch io {
+    
+    switch scene.interfaceOrientation {
       case .landscapeLeft, .landscapeRight:
         return true
       default:
@@ -124,7 +130,7 @@ public extension UIScreen {
   
   static var isIpadRegularHorizontalSize: Bool {
     guard Device.isIpad else {  return false }
-    guard let window = UIWindow.keyWindow else {  return false }
+    guard let window = UIWindow.activeKeyWindow else {  return false }
     return window.traitCollection.horizontalSizeClass == .regular
   }
 }

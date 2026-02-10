@@ -28,7 +28,7 @@ public extension UIViewController {
   /// Returns the top most view controller, ie. either the root view controller
   /// or its top most presented view controller
   static var top: UIViewController? {
-    if let keyWindow = UIApplication.shared.windows.filter({$0.isKeyWindow}).first,
+    if let keyWindow = UIApplication.shared.activeKeyWindow,
        let root = keyWindow.rootViewController {
       return root.topmostModalVc
     }
@@ -133,27 +133,10 @@ public extension UIViewController {
     }
     return controller
   }
-  
-  /// The App's key window
-  static var keyWindow: UIWindow? {
-    if #available(iOS 13, *) {
-      var last: UIWindow? = nil
-      for scene in UIApplication.shared.connectedScenes {
-        if let windowScene = scene as? UIWindowScene {
-          for window in windowScene.windows {
-            if window.isKeyWindow { return window }
-            else { last = window }
-          }
-        }
-      }
-      return last
-    }
-    else { return UIApplication.shared.keyWindow }
-  } 
-  
+    
   /// The App's root view controller
   static var currentRootController: UIViewController? { 
-    keyWindow?.rootViewController 
+    UIApplication.shared.activeKeyWindow?.rootViewController 
   }
   
   /// check if applications key window root controller is requested type or is navigationcontroller and
