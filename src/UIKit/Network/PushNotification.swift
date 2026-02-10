@@ -306,7 +306,7 @@ extension PushNotification {
   }
 }
 
-/// This is not the real status bar, it's a scrollview that resides beneath 
+/// This is not the real status bar, it's a scrollview that resides beneath
 /// the status bar of the same dimensions. It is used to detect status bar
 /// touches.
 open class StatusBar: UIScrollView, UIScrollViewDelegate, HandleOrientation {
@@ -315,9 +315,10 @@ open class StatusBar: UIScrollView, UIScrollViewDelegate, HandleOrientation {
   public var orientationChangedClosure = OrientationClosure()
   
   // Parent view of viewcontroller
-  private var parent: UIView {
-    let win = UIApplication.shared.delegate!.window!
-    return win!.rootViewController!.view!
+  private var parent: UIView? {
+    return UIApplication.shared.activeKeyWindow?.rootViewController?.view
+    ?? superview
+    
   }
   
   /// Frame of real status bar
@@ -356,6 +357,7 @@ open class StatusBar: UIScrollView, UIScrollViewDelegate, HandleOrientation {
     self.scrollsToTop = true
     self.scrollRectToVisible(CGRect(x: 0, y: 1, width: sbframe.width, 
                              height: sbframe.height), animated: false)
+    guard let view = view else { return }
     view.addSubview(self)
     self.translatesAutoresizingMaskIntoConstraints = false
     self.heightAnchor.constraint(equalToConstant: 
