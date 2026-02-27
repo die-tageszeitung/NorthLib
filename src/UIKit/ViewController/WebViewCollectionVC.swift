@@ -200,7 +200,17 @@ open class WebViewCollectionVC: PageCollectionVC {
     let bottomInset = 52 + UIWindow.bottomInset
     optionalWebViews.forEach {
       if let wv = $0.webView {
-        if needsReload(webView: wv) { wv.reload() }
+        if needsReload(webView: wv) {
+          if let url = wv.originalUrl {
+            var request = URLRequest(url: url)
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            wv.load(request)
+          }
+          else {
+            wv.reload()
+          }
+          //debug(">>> reloading webView with url: \(wv.originalUrl?.lastPathComponent ?? "[undefined URL]") ")
+        }
         wv.scrollView.indicatorStyle = indicatorStyle
         wv.scrollView.scrollIndicatorInsets
         = UIEdgeInsets(top: 58, left: 0, bottom: bottomInset , right: 0)
