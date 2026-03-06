@@ -117,7 +117,7 @@ open class WebViewCollectionVC: PageCollectionVC {
 
   // The closures to call when loading is completed
   @Callback
-  public var whenLoaded: Callback<Void>.Store
+  public var whenLoaded: Callback<WebView>.Store
 
   // The closures to call when a link is pressed
   @Callback<(URL?,URL?)>
@@ -289,8 +289,8 @@ open class WebViewCollectionVC: PageCollectionVC {
       self?.$whenLinkPressed.notify(sender: self, content: arg)
       self?.onPageChange()
     }
-    webView.whenLoaded { [weak self] _ in
-      self?.$whenLoaded.notify(sender: self)
+    webView.whenLoaded { [weak self] wv in
+      self?.$whenLoaded.notify(sender: self, content: wv)
     }
     webView.scrollDelegate.whenScrolled { [weak self] ratio in
       self?.$whenScrolled.notify(sender: self, content: ratio)
