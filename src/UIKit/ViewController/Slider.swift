@@ -43,6 +43,12 @@ open class Slider: NSObject, DoesLog, HandleOrientation {
     set { if !isHorizontal { fromDefault = newValue } }
   }
   
+  public func cleanup(){
+    active = UIViewController()
+    self.orientationChangedClosure.onOrientationChange(closure: {})
+    resetConstraints()
+  }
+  
   // Closure called upon orientation changes
   public var orientationChangedClosure = OrientationClosure()
   /// how much of the active view controller is covered by the slider
@@ -595,6 +601,22 @@ open class ButtonSlider: Slider {
   override func setupInvariableConstraints() {
     super.setupInvariableConstraints()
     pin(sliderView.top, to: active.view!.top, priority: .required)
+  }
+  
+  /**
+   Exchanges the slider content between two ButtonSlider instances.
+
+   This helper allows different components (e.g. the menu content in
+   ArticleVC and SectionVC) to share and preserve the same state.
+   Instead of recreating the slider, the underlying slider instances
+   are swapped so the current state (selection, scroll position, etc.)
+   remains consistent across components.
+   */
+  public func exchangeSliderContent(from: ButtonSlider) {
+    let currentSlider = self.slider
+    let sourceSlider = from.slider
+    self.slider = sourceSlider
+    from.slider = currentSlider
   }
   
   public init(slider: UIViewController, into active: UIViewController) {
