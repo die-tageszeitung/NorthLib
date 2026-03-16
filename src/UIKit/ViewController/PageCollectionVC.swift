@@ -127,7 +127,15 @@ open class PageCollectionVC: UIViewController {
     collectionView?.viewProvider(provider: provider)
   }
  
+  //overwriteable
+  open func releaseOnDisappear(){}
+  
   // MARK: - Life Cycle
+  open override func didMove(toParent parent: UIViewController?) {
+    super.didMove(toParent: parent)
+    if parent == nil { releaseOnDisappear() }
+  }
+  
   open override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
     collectionView?.preventInit = false

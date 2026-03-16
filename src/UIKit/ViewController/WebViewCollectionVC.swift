@@ -188,9 +188,10 @@ open class WebViewCollectionVC: PageCollectionVC {
   
   var optionalWebViews:[OptionalWebView] = []
   
-  open func releaseOnDisappear(){
+  open override func releaseOnDisappear(){
     optionalWebViews.forEach{$0.release()}
     optionalWebViews = []
+    super.releaseOnDisappear()
   }
   
   /// Overwrite if necessary (eg. to inject JS instead of reloading)

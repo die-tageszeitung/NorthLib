@@ -146,6 +146,14 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
     }
     return .zero
   }
+  
+  ///do not use releaseOnDisappear here due in slider on close remove is called: self.active.removeSubVC(self.slider)
+  public func cleanup() {
+    self.pdfModel = nil
+    clickCallback = nil
+    onTitleCellChangeClosure = nil
+    titleCell = nil
+  }
 }
 
 // MARK: - PdfOverviewCollectionVC
