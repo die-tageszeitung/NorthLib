@@ -22,6 +22,12 @@ public extension Array {
       self.append(element)
     }
   }
+  /// Prepend element if not nil
+  mutating func prependIfPresent(_ element: Element?) {
+    if let element = element {
+      self.insert(element, at: 0)
+    }
+  }
 }
 
 public extension Array where Element == String {

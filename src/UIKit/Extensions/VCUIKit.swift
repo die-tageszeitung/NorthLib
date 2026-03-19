@@ -7,6 +7,11 @@
 
 import UIKit
 
+// MARK: - Protocol
+public protocol AccessibilityTargetsProvider {
+  var accessibilityViews: [UIView] { get }
+}
+
 
 public extension UIViewController {
   
@@ -46,15 +51,41 @@ public extension UIViewController {
    */
   @discardableResult
   func presentSubVC(controller ctr: UIViewController,
-                    inView view:UIView) -> UIViewController {
+                    inView view:UIView, accessibilityElements: [UIView]? = nil) -> UIViewController {
+    self.addChild(ctr)///calls willMove and didMove automatically
+    ctr.beginAppearanceTransition(true, animated: false)
     ctr.view.frame = view.bounds
-    ctr.willMove(toParent: self)
-    view.addSubview(ctr.view)
     view.clipsToBounds = true
-    self.addChild(ctr)
+    view.addSubview(ctr.view)
+    ctr.endAppearanceTransition()
     ctr.didMove(toParent: self)
+    if let elms = accessibilityElements {
+      self.accessibilityElements = elms
+    }
+    else if let elms = (ctr as? AccessibilityTargetsProvider)?.accessibilityViews {
+      self.accessibilityElements = elms
+    }
+    ctr.view.accessibilityViewIsModal = true
+    self.view.isAccessibilityElement = false
+    //debug(">>> presentSubVC \(ctr.view)");
     return ctr
   }
+  
+  /// removes a subview controller
+  func removeSubVC(_ ctr: UIViewController) {
+    ctr.willMove(toParent: nil)
+    ctr.beginAppearanceTransition(false, animated: false)
+    ctr.view.removeFromSuperview()
+    ctr.endAppearanceTransition()
+    ctr.removeFromParent()
+    if let accessibilityElements
+        = (self as? AccessibilityTargetsProvider)?.accessibilityViews {
+      self.accessibilityElements = accessibilityElements
+      //debug(">>> restore acc with \(accessibilityElements.count) elements")
+    }
+    //debug(">>> removeSubVC");
+  }
+  
   
   /**
    * `presentSubVC(name:inView:)` reads a view controller named 'name',
@@ -73,13 +104,6 @@ public extension UIViewController {
         return presentSubVC(controller: ctr, inView: view)
       }
       else { return nil }
-  }
-  
-  /// removes a subview controller
-  func removeSubVC(_ ctr: UIViewController) {
-    ctr.willMove(toParent: nil)
-    ctr.view.removeFromSuperview()
-    ctr.removeFromParent()
   }
   
   /// returns the width of the device's screen

@@ -325,7 +325,9 @@ open class Slider: NSObject, DoesLog, HandleOrientation {
     sliderView.isHidden = false
     if !isOpen {
       shadeView.alpha = 0
-      active.presentSubVC(controller: slider, inView: contentView)
+      var elms = (slider as? AccessibilityTargetsProvider)?.accessibilityViews
+      elms?.prependIfPresent((self as? ButtonSlider)?.button)
+      active.presentSubVC(controller: slider, inView: contentView, accessibilityElements: elms)
       view.layoutIfNeeded()
     }
     isOpen = toOpen

@@ -232,28 +232,7 @@ open class PageCollectionVC: UIViewController {
     
     let isFirst = index == 0
     let isLast  = index == count - 1
-    
-    // focus-update (nur wenn nötig)
-    let focusTarget: Any? =
-    isFirst ? rightTapEnEdgeButton :
-    isLast  ? leftTapEnEdgeButton : defaultAccessibilityView ?? self.collectionView
-    
-    if let target = focusTarget {
-      UIAccessibility.post(notification: .layoutChanged, argument: target)
-    }
-    
-    if isFirst {
-      leftTapEnEdgeButton.accessibilityTraits.insert(.notEnabled)
-    } else {
-      leftTapEnEdgeButton.accessibilityTraits.remove(.notEnabled)
-    }
-    
-    if isLast {
-      rightTapEnEdgeButton.accessibilityTraits.insert(.notEnabled)
-    } else {
-      rightTapEnEdgeButton.accessibilityTraits.remove(.notEnabled)
-    }
-    
+        
     leftTapEnEdgeButton.backgroundColor
     = edgeTapToNavigateVisible2
     ? UIColor.gray.withAlphaComponent(0.15)
