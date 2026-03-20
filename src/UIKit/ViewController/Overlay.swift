@@ -110,6 +110,8 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
     shadeView = UIView()
     shadeView?.backgroundColor = shadeColor
     shadeView!.alpha = 0.0
+    activeVC.addChild(overlayVC)
+    overlayVC.beginAppearanceTransition(true, animated: false)
     activeVC.view.addSubview(shadeView!)
     pin(shadeView!, to: activeVC.view)
     contentView = overlayVC.view
@@ -179,11 +181,18 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       pin(overlayView.bottom, to: activeVC.view.bottom, dist: -offset)
     }
     
+    overlayVC.endAppearanceTransition()
     overlayVC.didMove(toParent: activeVC)
     
     if let ct = overlayVC as? OverlayChildViewTransfer {
       ct.delegate.addToOverlayContainer(overlayView)
     }
+    
+    if let elms = (overlayVC as? AccessibilityTargetsProvider)?.accessibilityViews {
+      activeVC.accessibilityElements = elms
+    }
+    overlayVC.view.accessibilityViewIsModal = true
+    activeVC.view.isAccessibilityElement = false
   }
 
   
@@ -421,6 +430,8 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
   
   // MARK: - removeFromActiveVC
   private func removeFromActiveVC(){
+    overlayVC.willMove(toParent: nil)
+    overlayVC.beginAppearanceTransition(false, animated: false)
     shadeView?.removeFromSuperview()
     shadeView = nil
     overlayVC.view.removeFromSuperview()
@@ -428,8 +439,15 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       ct.delegate.removeFromOverlay()
     }
     overlayView?.removeFromSuperview()
+    overlayVC.endAppearanceTransition()
     overlayView = nil
     overlayVC.removeFromParent()
+    
+    if let accessibilityElements
+        = (activeVC as? AccessibilityTargetsProvider)?.accessibilityViews {
+      activeVC.accessibilityElements = accessibilityElements
+      //debug(">>> restore acc with \(accessibilityElements.count) elements")
+    }
     closing = false
     self.onCloseHandler?()
     self.closeAction = nil
