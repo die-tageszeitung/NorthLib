@@ -103,8 +103,9 @@ open class WebViewCollectionVC: PageCollectionVC {
   public var urls: [WebViewUrl] = []
   public var baseDir: String?
   public var current: WebViewUrl? { 
-    if let i = index { return urls[i] }
-    else { return nil }
+    return urls[index]
+//    if let i = index { return urls[i] }
+//    else { return nil }
   }
   fileprivate var initialUrl: URL?
   

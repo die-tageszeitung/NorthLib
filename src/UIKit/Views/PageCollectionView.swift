@@ -35,23 +35,73 @@ import UIKit
  but it will be that view that would be near the center when the scrolling would 
  have come to a stop. This is a more fluent paging effect.
  */
-open class PageCollectionView: UICollectionView, UICollectionViewDelegate, 
-  UICollectionViewDataSource, UIScrollViewDelegate, UICollectionViewDelegateFlowLayout {
+open class PageCollectionView: UICollectionView,
+                              UICollectionViewDelegateFlowLayout,
+                               UICollectionViewDataSource,
+                              UIScrollViewDelegate {
+
+
+    // MARK: - Init
   
-  /// relative spacing between pages (in relation to the Carousel's width)
-  open var relativeSpacing: CGFloat = 0.12
-  /// relative width of one page (in relation to the Carousel's width)
-  open var relativePageWidth: CGFloat = 0.6
-  /// width of collection view
-  open var cwidth: CGFloat { return bounds.size.width }
-  /// width of page
-  open var pwidth: CGFloat { return cwidth * relativePageWidth }
-  /// width of spacing
-  open var swidth: CGFloat { return cwidth * relativeSpacing }
-  /// width of cell incl. spacing
-  open var cellWidth: CGFloat { return pwidth + swidth }
-  /// inset of first/last page
-  open var inset: CGFloat { return (cwidth - pwidth) / 2 }
+    private func configureLayout() {
+        guard let layout = collectionViewLayout as? UICollectionViewFlowLayout else { return }
+
+        layout.scrollDirection = .horizontal
+//        layout.minimumLineSpacing = spacing
+//        layout.sectionInset = UIEdgeInsets(top: 0, left: inset, bottom: 0, right: inset)
+        layout.itemSize = CGSize(width: bounds.size.width, height: bounds.size.height)
+        decelerationRate = .fast
+        showsHorizontalScrollIndicator = false
+    }
+
+    // MARK: - Layout
+
+//    public func collectionView(_ collectionView: UICollectionView,
+//                               layout collectionViewLayout: UICollectionViewLayout,
+//                               sizeForItemAt indexPath: IndexPath) -> CGSize {
+//        return CGSize(width: pageWidth, height: bounds.height)
+//    }
+  
+//  //  // MARK: - UICollectionViewDelegateFlowLayout
+//  //
+//    public func collectionView(_ collectionView: UICollectionView,
+//      layout collectionViewLayout: UICollectionViewLayout,
+//      sizeForItemAt indexPath: IndexPath) -> CGSize {
+//      let size = CGSize(width: pwidth, height: bounds.size.height)
+//      return size
+//    }
+  
+
+    // MARK: - Paging (NEW CORE FIX)
+
+    open func scrollViewWillEndDragging(_ scrollView: UIScrollView,
+                                          withVelocity velocity: CGPoint,
+                                          targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+
+        guard let layout = collectionViewLayout as? UICollectionViewFlowLayout else { return }
+
+        let pageWidthWithSpacing = bounds.size.width + layout.minimumLineSpacing
+
+        let rawPage = (scrollView.contentOffset.x + scrollView.contentInset.left) / pageWidthWithSpacing
+
+        let targetPage: CGFloat
+
+        if velocity.x > 0 {
+            targetPage = ceil(rawPage)
+        } else if velocity.x < 0 {
+            targetPage = floor(rawPage)
+        } else {
+            targetPage = round(rawPage)
+        }
+
+        let newOffset = targetPage * pageWidthWithSpacing - scrollView.contentInset.left
+
+        targetContentOffset.pointee.x = newOffset
+    }
+//
+//
+//open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
+//  UICollectionViewDataSource, UIScrollViewDelegate, UICollectionViewDelegateFlowLayout {
   
   public var preventScrollIndexUpdate = false
   
@@ -140,6 +190,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     contentInsetAdjustmentBehavior = .never
     register(PageCell.self, forCellWithReuseIdentifier: PageCollectionView.reuseIdent)
     layout.scrollDirection = .horizontal
+//    configureLayout()
     delegate = self
     dataSource = self
     if scrollFromLeftToRight {
@@ -160,13 +211,14 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   
   public convenience init() { self.init(frame: CGRect()) }
   
-  var preventInit: Bool = false {
-    didSet { if preventInit == false {initialize()}}
-  }
-  
+//  var preventInit: Bool = false {
+//    didSet { if preventInit == false {initialize()}}
+//  }
+//  
   open override func didMoveToWindow() {
     super.didMoveToWindow()
-    initialize()
+//    initialize()
+    configureLayout()
   }
   
   fileprivate var _index: Int?
@@ -174,31 +226,31 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   fileprivate var initialIndex: Int? = nil
   fileprivate var collectionViewInitialized = false
   
-  // initialize with initialIndex when scroll view is ready
-  fileprivate func initialize() {
-    if preventInit || self.window == nil { return }
-    if self.bounds.width != self.window?.frame.size.width ?? -1 {
-      ///ensure that the collection view is layouted correctly
-      self.doLayout()
-    }
-    guard let layout = self.collectionViewLayout as? UICollectionViewFlowLayout
-      else { return }
-    if !isInitialized {
-      layout.minimumLineSpacing = swidth
-      layout.sectionInset = UIEdgeInsets(top: 0, left: inset, bottom: 0, right: inset)
-      self.isInitialized = true
-      if let idx = self.initialIndex {
-        self.index = idx
-      }
-    }
-  }
+//  // initialize with initialIndex when scroll view is ready
+//  fileprivate func initialize() {
+//    if preventInit || self.window == nil { return }
+//    if self.bounds.width != self.window?.frame.size.width ?? -1 {
+//      ///ensure that the collection view is layouted correctly
+//      self.doLayout()
+//    }
+//    guard let layout = self.collectionViewLayout as? UICollectionViewFlowLayout
+//      else { return }
+//    if !isInitialized {
+//      layout.minimumLineSpacing = swidth
+//      layout.sectionInset = UIEdgeInsets(top: 0, left: inset, bottom: 0, right: inset)
+//      self.isInitialized = true
+//      if let idx = self.initialIndex {
+//        self.index = idx
+//      }
+//    }
+//  }
   
-  public func updateLayout(){
-    guard let layout = self.collectionViewLayout as? UICollectionViewFlowLayout
-    else { return }
-    layout.minimumLineSpacing = swidth
-    layout.sectionInset = UIEdgeInsets(top: 0, left: inset, bottom: 0, right: inset)
-  }
+//  public func updateLayout(){
+//    guard let layout = self.collectionViewLayout as? UICollectionViewFlowLayout
+//    else { return }
+//    layout.minimumLineSpacing = swidth
+//    layout.sectionInset = UIEdgeInsets(top: 0, left: inset, bottom: 0, right: inset)
+//  }
   
   /// Returns the optional view at a given index (if that view is visible)
   open func optionalView(at oidx: Int? = nil) -> OptionalView? {
@@ -371,54 +423,50 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
       let itemIndex = indexPath.item
       debug("index \(itemIndex) requested in cell \(address(cell))")
       cell.update(pcv: self, idx: itemIndex)
-      initialize()
+//      initialize()
+      cell.addBorder(.red)
       return cell
     }
     return PageCell()
   }
   
-  // MARK: - UICollectionViewDelegateFlowLayout
-  
-  public func collectionView(_ collectionView: UICollectionView, 
-    layout collectionViewLayout: UICollectionViewLayout,
-    sizeForItemAt indexPath: IndexPath) -> CGSize {
-    let size = CGSize(width: pwidth, height: bounds.size.height)
-    return size
-  }
-  
   // MARK: - UIScrollViewDelegate
   
-  // Return index at a given scroll offset
-  private func offset2index(_ offset: CGFloat) -> Int {
-    let centerX = offset + cwidth/2
-    let i = (centerX - inset) / cellWidth
-    var idx = Int(round(i))
-    if i - CGFloat(idx) > 0 { idx += 1 }
-    return max(idx - 1, 0)
-  }
+//  // Return index at a given scroll offset
+//  private func offset2index(_ offset: CGFloat) -> Int {
+//    
+////    let centerX = offset + cwidth/2
+////    let i = (centerX - inset) / cellWidth
+////    var idx = Int(round(i))
+////    if i - CGFloat(idx) > 0 { idx += 1 }
+////    return max(idx - 1, 0)
+//  }
   
-  // Return scroll offset of given index
-  private func index2offset(_ idx: Int) -> CGFloat {
-    let offset = cellWidth * CGFloat(idx)
-    return offset
-  }
+//  // Return scroll offset of given index
+//  private func index2offset(_ idx: Int) -> CGFloat {
+////    let offset = cellWidth * CGFloat(idx)
+//    return offset
+//  }
   
   // While scrolling update page index
   public func scrollViewDidScroll(_ scrollView: UIScrollView) {
     if preventScrollIndexUpdate { return }
-    let pageIndex = offset2index(contentOffset.x)
-    if pageIndex != _index { updateDisplaying(pageIndex, isFromScroll: true) }  
+//    let pageIndex = offset2index(contentOffset.x)
+//    if pageIndex != _index { updateDisplaying(pageIndex, isFromScroll: true) }  
   }
   
-  // When dragging stops, position collection view to a complete page  
-  public func scrollViewWillEndDragging(_ scrollView: UIScrollView, 
-                                        withVelocity velocity: CGPoint, 
-                                        targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-    if !isPagingEnabled {
-      let pointee = targetContentOffset.pointee.x
-      let idx = offset2index(pointee)
-      targetContentOffset.pointee.x = index2offset(idx)
-    }
-  }
+//  // When dragging stops, position collection view to a complete page  
+//  public func scrollViewWillEndDragging(_ scrollView: UIScrollView, 
+//                                        withVelocity velocity: CGPoint, 
+//                                        targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+//    print("scrollViewWillEndDragging with velocity: \(velocity) and targetContentOffset: \(targetContentOffset.pointee)")
+////    if !isPagingEnabled {
+////      let pointee = targetContentOffset.pointee.x
+////      let idx = offset2index(pointee)
+////      targetContentOffset.pointee.x = index2offset(idx)
+////    }
+//  }
 
 } // PageCollectionView
+
+
