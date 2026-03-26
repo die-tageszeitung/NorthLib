@@ -230,9 +230,6 @@ open class PageCollectionVC: UIViewController {
     leftTapEnEdgeButton.isHidden = false
     rightTapEnEdgeButton.isHidden = false
     
-    let isFirst = index == 0
-    let isLast  = index == count - 1
-        
     leftTapEnEdgeButton.backgroundColor
     = edgeTapToNavigateVisible2
     ? UIColor.gray.withAlphaComponent(0.15)

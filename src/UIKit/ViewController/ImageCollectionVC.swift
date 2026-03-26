@@ -111,8 +111,6 @@ open class ImageCollectionVC: PageCollectionVC, ImageCollectionVCSpec {
       }
     }
   }
-  
-  
 } // PageCollectionVC
 
 // MARK: - OptionalImageItem: Closures
