@@ -7,9 +7,6 @@
 
 import UIKit
 
-fileprivate var countVC = 0
-
-
 open class PageCollectionVC: UIViewController {
   /// option to overwrite edge tap enabled for custom subclasses
   open var preventEdgeTapToNavigate: Bool { false }
