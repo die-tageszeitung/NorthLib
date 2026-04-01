@@ -26,8 +26,8 @@ open class ImageCollectionVC: PageCollectionVC, ImageCollectionVCSpec {
   }
   public var images: [OptionalImage] = []{
     didSet{ 
-      super.count = images.count
-      updatePageControllDots() 
+      super.collectionView.count = images.count
+      updatePageControllDots()
     }
   }
   
@@ -36,7 +36,6 @@ open class ImageCollectionVC: PageCollectionVC, ImageCollectionVCSpec {
   // MARK: Life Cycle
   open override func viewDidLoad() {
     super.viewDidLoad()
-    self.inset = 0.0
     prepareCollectionView()
     setupXButton()
     setupPageControl()
@@ -51,15 +50,15 @@ open class ImageCollectionVC: PageCollectionVC, ImageCollectionVCSpec {
         self?.defaultOnXHandler()
       }
     }
-    onDisplay { [weak self]  (idx, oview, isFromScroll) in
+    onDisplay { [weak self]  (idx, oview) in
       guard let self = self else { return }
       ///Apply PageControll Dots Update
       guard let pageControl = self.pageControl else { return }
-      if self.pageControlMaxDotsCount > 0, self.count > 0,
-        self.count > self.pageControlMaxDotsCount {
+      if self.pageControlMaxDotsCount > 0, self.collectionView.count > 0,
+         self.collectionView.count > self.pageControlMaxDotsCount {
         pageControl.currentPage
           = Int( round( Float(idx+1)
-                        * Float(self.pageControlMaxDotsCount)/Float(self.count)
+                        * Float(self.pageControlMaxDotsCount)/Float(self.collectionView.count)
             ) ) - 1
       }
       else {
@@ -67,14 +66,14 @@ open class ImageCollectionVC: PageCollectionVC, ImageCollectionVCSpec {
       }
     }
     //initially render CollectionView
-    self.collectionView?.reloadData()
+    self.collectionView.reloadData()
   }
   
   // MARK: Layout
   open override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
     if let iPath = scrollToIndexPathAfterLayoutSubviews {
-      collectionView?.scrollToItem(at: iPath, at: .centeredHorizontally, animated: false)
+      collectionView.scrollToItem(at: iPath, at: .centeredHorizontally, animated: false)
       scrollToIndexPathAfterLayoutSubviews = nil
     }
   }
@@ -87,12 +86,12 @@ open class ImageCollectionVC: PageCollectionVC, ImageCollectionVCSpec {
      minus the section insets top and bottom values,
      minus the content insets top and bottom values.
      */
-    collectionView?.collectionViewLayout.invalidateLayout()
+    collectionView.collectionViewLayout.invalidateLayout()
   }
   
   open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
     super.viewWillTransition(to: size, with: coordinator)
-    scrollToIndexPathAfterLayoutSubviews = collectionView?.indexPathsForVisibleItems.first
+    scrollToIndexPathAfterLayoutSubviews = collectionView.indexPathsForVisibleItems.first
   }
   
   open func setupViewProvider(){
@@ -137,18 +136,15 @@ extension ImageCollectionVC {
 // MARK: - Helper
 extension ImageCollectionVC {
   func prepareCollectionView() {
-    self.collectionView?.backgroundColor = UIColor.black
-    self.collectionView?.isAccessibilityElement = false
-    self.collectionView?.showsHorizontalScrollIndicator = false
-    self.collectionView?.showsVerticalScrollIndicator = false
+    self.collectionView.backgroundColor = UIColor.black
     self.pinTopToSafeArea = false
     self.pinBottomToSafeArea = false
   }
   
   private func updatePageControllDots() {
     guard let pageControl = self.pageControl else { return }
-    if pageControlMaxDotsCount == 0 || self.count < pageControlMaxDotsCount {
-      pageControl.numberOfPages = self.count
+    if pageControlMaxDotsCount == 0 || self.collectionView.count < pageControlMaxDotsCount {
+      pageControl.numberOfPages = self.collectionView.count
     } else {
       pageControl.numberOfPages = pageControlMaxDotsCount
     }

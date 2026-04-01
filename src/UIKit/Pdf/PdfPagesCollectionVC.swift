@@ -32,9 +32,9 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
   
   func updateData(){
     guard let model = pdfModel else { return }
-    self.index = model.index
-    super.count = model.count
-    self.collectionView?.reloadData()
+    self.collectionView.index = model.index
+    super.collectionView.count = model.count
+    self.collectionView.reloadData()
   }
   
   public init(data:PdfModel, useTopGradient: Bool) {
@@ -154,7 +154,7 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
       }
     }*/
     
-    onDisplay { [weak self] (idx, optionalView, isFromScroll) in
+    onDisplay { [weak self] (idx, optionalView) in
       guard let ziv = optionalView as? ZoomedImageView,
             let pdfImg = ziv.optionalImage as? ZoomedPdfImageSpec else { return }
       ziv.menu.menu = self?.menuItems ?? []

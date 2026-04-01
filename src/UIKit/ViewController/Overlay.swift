@@ -716,7 +716,7 @@ extension ImageCollectionVC : OverlayChildViewTransfer{
   /// add and Layout to Child Views
   public func addToOverlayContainer(_ container:UIView?){
     guard let container = container else { return }
-    self.collectionView?.backgroundColor = .clear
+    self.collectionView.backgroundColor = .clear
     container.addSubview(xButton)
     pin(xButton.right, to: container.rightGuide(), dist: -15)
     pin(xButton.top, to: container.topGuide(), dist: 15)

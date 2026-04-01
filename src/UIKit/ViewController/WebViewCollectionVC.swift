@@ -155,7 +155,7 @@ open class WebViewCollectionVC: PageCollectionVC {
     
   public func displayUrls(urls: [WebViewUrl]? = nil) {
     if let urls = urls { self.urls = urls }
-    self.count = self.urls.count
+    self.collectionView.count = self.urls.count
     if let iurl = initialUrl {
       initialUrl = nil
       gotoUrl(url: iurl)
@@ -225,7 +225,6 @@ open class WebViewCollectionVC: PageCollectionVC {
   open override func viewDidLoad() {
     super.viewDidLoad()
     self.view.backgroundColor = UIColor.white
-    inset = 0
     onLeftTap {[weak self] in
       return self?.handleLeftTap() ?? false
     }

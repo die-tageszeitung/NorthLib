@@ -18,65 +18,40 @@ open class PageCollectionVC: UIViewController {
   public var edgeTapToNavigateVisible2: Bool
   
   /// The collection view displaying OptionalViews
-  open var collectionView:PageCollectionView? = PageCollectionView()
+  open var collectionView:PageCollectionView = PageCollectionView()
   
-  /// The Layout object determining the size of the cells
-  open var cvLayout: UICollectionViewFlowLayout!
-
-  /// A closure providing the optional views to display
-  open var provider: ((Int, OptionalView?)->OptionalView)? = nil
-  
-  /// inset from top/bottom/left/right as factor to min(width,height)
-  open var inset = 0.025
-    
   public var invalidateLayoutNeededOnViewWillAppear:Bool = false
-  
-  // The raw cell size (without bounds)
-  private var rawCellsize: CGSize { return self.collectionView?.bounds.size ?? CGSize.zero }
-  
-  // The default margin of cells (ie. left/right/top/bottom insets)
-  private var margin: CGFloat {
-    let s = rawCellsize
-    return min(s.height, s.width) * CGFloat(inset)
-  }
-  
-  // The size of a cell is defined by the collection views bounds minus margins
-  private var cellsize: CGSize {
-    let s = rawCellsize
-    return CGSize(width: s.width - 2*margin, height: s.height - 2*margin)
-  }
   
   // View which is currently displayed
   public var currentView: OptionalView? { 
-    if let i = index { return collectionView?.optionalView(at: i) }
+    if let i = index { return collectionView.optionalView(at: i) }
     else { return nil }
   }
   
+  fileprivate var suppressExternalIndexChangesUntil: TimeInterval = 0
+  
   /// Index of current view, change it to scroll to a certain cell
   open var index: Int? {
-    get { return collectionView?.index }
+    get { collectionView.index }
     set {
-      if collectionView?.index == nil {
-        ///initially call layout if not done jet to ensure scroll to index works
-        collectionView?.doLayout()
+      let now = Date().timeIntervalSince1970
+      
+      if now < suppressExternalIndexChangesUntil {
+        log(">>>> IGNORE external index (resize protection): \(newValue ?? -1)")
+        return
       }
-      collectionView?.index = newValue
+      
+      log(">>>> setIndex from extern: \(newValue ?? -1)")
+      collectionView.index = newValue
     }
   }
 
-  /// Define and change the number of views to display, will reload data
-  open var count: Int {
-    get { return collectionView?.count ?? 0 }
-    set { collectionView?.count = newValue }
-  }
-  
   private var topConstraint: NSLayoutConstraint?
   private var bottomConstraint: NSLayoutConstraint?
   
   // Pin top of collectionView
   private func pinTop() {
     topConstraint?.isActive = false
-    guard let collectionView = collectionView else { return }
     if pinTopToSafeArea {
       topConstraint = pin(collectionView.top, to: self.view.topGuide())
     }
@@ -86,7 +61,6 @@ open class PageCollectionVC: UIViewController {
   // Pin bottom of collectionView
   private func pinBottom() {
     bottomConstraint?.isActive = false
-    guard let collectionView = collectionView else { return }
     if pinBottomToSafeArea {
       bottomConstraint = pin(collectionView.bottom, to: self.view.bottomGuide())
     }
@@ -105,23 +79,23 @@ open class PageCollectionVC: UIViewController {
 
   @discardableResult
   /// Define closure to call when a cell is newly displayed
-  public func onDisplay(closure: @escaping (Int, OptionalView?, Bool)->()) -> String? {
-    return collectionView?.onDisplay(closure: closure)
+  public func onDisplay(closure: @escaping (Int, OptionalView?)->()) -> String? {
+    return collectionView.onDisplay(closure: closure)
   }
   
   /// removes a closure to call when a cell is newly displayed  from closures by given key
   public func removeOnDisplay(forKey: String) {
-    collectionView?.removeOnDisplay(forKey: forKey)
+    collectionView.removeOnDisplay(forKey: forKey)
   }
   
   /// Define closure to call when a cell is newly displayed
   public func onEndDisplayCell(closure: @escaping (Int, OptionalView?)->()) {
-    collectionView?.onEndDisplayCell(closure: closure)
+    collectionView.onEndDisplayCell(closure: closure)
   }
     
   /// Defines the closure which delivers the views to display
   open func viewProvider(provider: @escaping (Int, OptionalView?)->OptionalView) {
-    collectionView?.viewProvider(provider: provider)
+    collectionView.viewProvider(provider: provider)
   }
  
   //overwriteable
@@ -135,18 +109,11 @@ open class PageCollectionVC: UIViewController {
   
   open override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
-    collectionView?.preventInit = false
     updateTapArea()
   }
 
   override open func loadView() {
     super.loadView()
-    collectionView?.preventInit = true
-    collectionView?.isPagingEnabled = true
-    collectionView?.relativePageWidth = 1
-    collectionView?.relativeSpacing = 0
-    collectionView?.backgroundColor = UIColor.white
-    guard let collectionView = collectionView else { return }
     self.view.addSubview(collectionView)
     pinTop()
     pinBottom()
@@ -156,7 +123,6 @@ open class PageCollectionVC: UIViewController {
   
   open override func viewDidLoad() {
     super.viewDidLoad()
-    if count != 0 { collectionView?.reloadData() }
     updateTapArea()
   }
   
@@ -188,7 +154,7 @@ open class PageCollectionVC: UIViewController {
     btn.onTapping {[weak self] _ in
       if self?.onLeftTapClosure?() == true { return }
       guard let idx = self?.index, idx > 0 else { return }
-      self?.collectionView?.scrollto(idx-1, animated: true)
+      self?.collectionView.scrollto(idx-1, animated: true)
       guard UIAccessibility.isVoiceOverRunning else { return }
       self?.leftTapEnEdgeButton.accessibilityLabel = nil
       onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.leftTapEnEdgeButton)}
@@ -206,7 +172,7 @@ open class PageCollectionVC: UIViewController {
     btn.onTapping {[weak self] _ in
       if self?.onRightTapClosure?() == true { return }
       guard let idx = self?.index else { return }
-      self?.collectionView?.scrollto(idx+1, animated: true)
+      self?.collectionView.scrollto(idx+1, animated: true)
       guard UIAccessibility.isVoiceOverRunning else { return }
       self?.rightTapEnEdgeButton.accessibilityLabel = nil
       onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.rightTapEnEdgeButton)}
@@ -260,25 +226,44 @@ open class PageCollectionVC: UIViewController {
   // https://www.matrixprojects.net/p/uicollectionviewcell-dynamic-width/
   open override func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
     super.willTransition(to: newCollection, with: coordinator)
-    coordinator.animate(alongsideTransition: nil) { [weak self] ctx in
-      self?.collectionView?.collectionViewLayout.invalidateLayout()
-    }
+    log(">>>> viewWillTransition coll withidx: \(collectionView.index ?? -1)")
   }
-  
+    
   open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
-    collectionView?.preventScrollIndexUpdate = true
     super.viewWillTransition(to: size, with: coordinator)
-    coordinator.animateAlongsideTransition(in: nil) {[weak self] _ in
-      self?.collectionView?.isHidden = true
-    } completion: {[weak self] _ in
-      self?.collectionView?.collectionViewLayout.invalidateLayout()
-      self?.collectionView?.fixScrollPosition()
-      //PDF>Rotate: fix layout pos
-      if let ziv = self?.currentView as? ZoomedImageViewSpec {
-        ziv.invalidateLayout()
+    //ignore logs from sectionVC for the moment
+    if "\(self)".contains("SectionVC") { return }
+    guard let index = collectionView.index else { return }
+    log(">>>> viewWillTransition toSize with idx: \(index)")
+    // 🔒 Index EINMAL sichern
+    if collectionView.resizingTargetIndex == nil {
+      collectionView.resizingTargetIndex = index
+    }
+    collectionView.isResizing = true
+    suppressExternalIndexChangesUntil = Date().timeIntervalSince1970 + 0.6
+    
+    coordinator.animate(alongsideTransition: { [weak self] _ in
+      self?.collectionView.collectionViewLayout.invalidateLayout()
+      self?.log(">>>> viewWillTransition toSize #2: \(index)")
+    }) { [weak self] _ in
+      guard let self = self else { return }
+      self.log(">>>> viewWillTransition toSize #3: \(index)")
+      let target = self.collectionView.resizingTargetIndex ?? index
+      
+      self.collectionView.performBatchUpdates(nil) { _ in
+        self.collectionView.scrollToItem(
+          at: IndexPath(item: target, section: 0),
+          at: .left, // ⚠️ NICHT centered!
+          animated: false
+        )
+        self.log(">>>> viewWillTransition toSize #4: \(target)")
+        self.collectionView.index = target
+        onMainAfter(0.4) {[weak self] in
+          self?.collectionView.isResizing = false
+          self?.collectionView.resizingTargetIndex = nil
+          self?.suppressExternalIndexChangesUntil = Date().timeIntervalSince1970 + 0.2
+        }
       }
-      self?.collectionView?.showAnimated(duration: 0.1)
-      self?.collectionView?.preventScrollIndexUpdate = false
     }
   }
 } // PageCollectionVC
