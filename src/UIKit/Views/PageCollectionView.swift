@@ -67,6 +67,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
       at: .left,
       animated: animated
     )
+    callOnDisplay(idx: idx, oview: optionalView(at: idx))
   }
   
   public var currentIndex: Int {
