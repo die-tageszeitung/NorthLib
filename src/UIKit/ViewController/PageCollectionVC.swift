@@ -32,17 +32,13 @@ open class PageCollectionVC: UIViewController {
   
   /// Index of current view, change it to scroll to a certain cell
   open var index: Int? {
-    get { collectionView.index }
+    get { collectionView.currentIndex}
     set {
-      let now = Date().timeIntervalSince1970
-      
-      if now < suppressExternalIndexChangesUntil {
-        log(">>>> IGNORE external index (resize protection): \(newValue ?? -1)")
+      if Date().timeIntervalSince1970 < suppressExternalIndexChangesUntil {
         return
       }
-      
-      log(">>>> setIndex from extern: \(newValue ?? -1)")
-      collectionView.index = newValue
+      guard let idx = newValue else { return }
+      collectionView.scrollToIndex(idx)
     }
   }
 
@@ -154,7 +150,7 @@ open class PageCollectionVC: UIViewController {
     btn.onTapping {[weak self] _ in
       if self?.onLeftTapClosure?() == true { return }
       guard let idx = self?.index, idx > 0 else { return }
-      self?.collectionView.scrollto(idx-1, animated: true)
+      self?.collectionView.scrollToIndex(idx-1, animated: true)
       guard UIAccessibility.isVoiceOverRunning else { return }
       self?.leftTapEnEdgeButton.accessibilityLabel = nil
       onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.leftTapEnEdgeButton)}
@@ -172,7 +168,7 @@ open class PageCollectionVC: UIViewController {
     btn.onTapping {[weak self] _ in
       if self?.onRightTapClosure?() == true { return }
       guard let idx = self?.index else { return }
-      self?.collectionView.scrollto(idx+1, animated: true)
+      self?.collectionView.scrollToIndex(idx+1, animated: true)
       guard UIAccessibility.isVoiceOverRunning else { return }
       self?.rightTapEnEdgeButton.accessibilityLabel = nil
       onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.rightTapEnEdgeButton)}
@@ -226,44 +222,18 @@ open class PageCollectionVC: UIViewController {
   // https://www.matrixprojects.net/p/uicollectionviewcell-dynamic-width/
   open override func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
     super.willTransition(to: newCollection, with: coordinator)
-    log(">>>> viewWillTransition coll withidx: \(collectionView.index ?? -1)")
+    log(">>>> viewWillTransition coll withidx: \(collectionView.currentIndex)")
   }
     
   open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
     super.viewWillTransition(to: size, with: coordinator)
-    //ignore logs from sectionVC for the moment
-    if "\(self)".contains("SectionVC") { return }
-    guard let index = collectionView.index else { return }
-    log(">>>> viewWillTransition toSize with idx: \(index)")
-    // 🔒 Index EINMAL sichern
-    if collectionView.resizingTargetIndex == nil {
-      collectionView.resizingTargetIndex = index
-    }
-    collectionView.isResizing = true
-    suppressExternalIndexChangesUntil = Date().timeIntervalSince1970 + 0.6
+    
+    let index = collectionView.currentIndex
     
     coordinator.animate(alongsideTransition: { [weak self] _ in
       self?.collectionView.collectionViewLayout.invalidateLayout()
-      self?.log(">>>> viewWillTransition toSize #2: \(index)")
     }) { [weak self] _ in
-      guard let self = self else { return }
-      self.log(">>>> viewWillTransition toSize #3: \(index)")
-      let target = self.collectionView.resizingTargetIndex ?? index
-      
-      self.collectionView.performBatchUpdates(nil) { _ in
-        self.collectionView.scrollToItem(
-          at: IndexPath(item: target, section: 0),
-          at: .left, // ⚠️ NICHT centered!
-          animated: false
-        )
-        self.log(">>>> viewWillTransition toSize #4: \(target)")
-        self.collectionView.index = target
-        onMainAfter(0.4) {[weak self] in
-          self?.collectionView.isResizing = false
-          self?.collectionView.resizingTargetIndex = nil
-          self?.suppressExternalIndexChangesUntil = Date().timeIntervalSince1970 + 0.2
-        }
-      }
+      self?.collectionView.scrollToIndex(index, animated: false)
     }
   }
 } // PageCollectionVC

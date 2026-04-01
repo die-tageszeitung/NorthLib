@@ -32,7 +32,7 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
   
   func updateData(){
     guard let model = pdfModel else { return }
-    self.collectionView.index = model.index
+    self.collectionView.scrollToIndex(model.index)
     super.collectionView.count = model.count
     self.collectionView.reloadData()
   }
