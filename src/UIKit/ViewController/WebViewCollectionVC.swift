@@ -30,6 +30,7 @@ class OptionalWebView: OptionalView, DoesLog {
   
   var isAvailable: Bool { url.isAvailable }
   func loadView() {
+    log("load \(url.url.lastPathComponent)")
     if url.isAvailable { webView?.load(url: url.url) }
   }
   
@@ -199,9 +200,10 @@ open class WebViewCollectionVC: PageCollectionVC {
   
   open func reloadAllWebViews(){
     let bottomInset = 52 + UIWindow.bottomInset
+//    collectionView.visibleCells
     optionalWebViews.forEach {
       if let wv = $0.webView {
-        if needsReload(webView: wv) {
+        if true || needsReload(webView: wv) {
           if let url = wv.originalUrl {
             var request = URLRequest(url: url)
             request.cachePolicy = .reloadIgnoringLocalCacheData
@@ -232,11 +234,23 @@ open class WebViewCollectionVC: PageCollectionVC {
       return self?.handleRightTap() ?? false
     }
     viewProvider { [weak self] (index, oview) in
-      guard let self = self else { return UIView() }
+      guard let self = self else {
+        self?.debug("WTF RETURN EMPTY VIEW???")
+        return UIView()
+      }
+      self.debug("...request optional view...has: \(self.optionalWebViews.count) optional web views, index: \(index)")
       if let ov = oview as? OptionalWebView {
 //        self.debug("viewProvider: old:\(ov.url.url.lastPathComponent) -> \(self.urls[index].url.lastPathComponent)")
         ov.webView?.scrollView.indicatorStyle = self.indicatorStyle
-        ov.url = self.urls[index]
+        let newUrl = self.urls[index]
+        if ov.url.url.absoluteString == newUrl.url.absoluteString {
+          log("WARNING NO CHANGE! MAY RELOAD ERROR IN SOME IOS VERSIONS!! BUG")
+          ov.loadView()
+        }
+        else {
+          ov.url = newUrl
+        }
+        
         return ov
       }
       else {

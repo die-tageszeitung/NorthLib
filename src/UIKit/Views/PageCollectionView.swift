@@ -47,8 +47,9 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   }
   
   fileprivate static var countView = 0  // #PageCollectionViews instantiated
-  private static let reuseCellId = "pageCollectionViewCell"
-  
+  fileprivate static var reuseIdent: String =
+    { countView += 1; return "PCV\(countView)" }()
+
   
   // A closure providing the optional views to display
   public var provider: ((Int, OptionalView?)->OptionalView)? = nil
@@ -91,7 +92,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     isPagingEnabled = true
     backgroundColor = UIColor.clear
     contentInsetAdjustmentBehavior = .never
-    register(PageCell.self, forCellWithReuseIdentifier: PageCollectionView.reuseCellId)
+    register(PageCell.self, forCellWithReuseIdentifier: PageCollectionView.reuseIdent)
     layout.scrollDirection = .horizontal
     layout.sectionInset = .zero
     layout.minimumLineSpacing = 0.0
@@ -225,7 +226,7 @@ extension PageCollectionView {
   
   open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
     if let cell = collectionView.dequeueReusableCell(withReuseIdentifier:
-      PageCollectionView.reuseCellId, for: indexPath) as? PageCell {
+      Self.reuseIdent, for: indexPath) as? PageCell {
       let itemIndex = indexPath.item
       debug("index \(itemIndex) requested in cell \(address(cell))")
       cell.update(pcv: self, idx: itemIndex)
