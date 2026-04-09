@@ -47,7 +47,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   }
   
   fileprivate static var countView = 0  // #PageCollectionViews instantiated
-  private static let reuseCellId = "pageCollectionViewCell"
+  fileprivate static let reuseCellId = "pageCollectionViewCell"
   
   
   // A closure providing the optional views to display
@@ -96,6 +96,8 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     layout.sectionInset = .zero
     layout.minimumLineSpacing = 0.0
     isAccessibilityElement = false
+    ///It seams this has no direct effect
+    //isPrefetchingEnabled = true
     showsHorizontalScrollIndicator = false
     showsVerticalScrollIndicator = false
     delegate = self
@@ -224,8 +226,9 @@ extension PageCollectionView {
                            numberOfItemsInSection section: Int) -> Int { self.count }
   
   open func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-    if let cell = collectionView.dequeueReusableCell(withReuseIdentifier:
-      PageCollectionView.reuseCellId, for: indexPath) as? PageCell {
+    if let cell = collectionView
+      .dequeueReusableCell(withReuseIdentifier: PageCollectionView.reuseCellId,
+                           for: indexPath) as? PageCell {
       let itemIndex = indexPath.item
       debug("index \(itemIndex) requested in cell \(address(cell))")
       cell.update(pcv: self, idx: itemIndex)

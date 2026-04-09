@@ -188,12 +188,11 @@ open class WebViewCollectionVC: PageCollectionVC {
   
   var optionalWebViews:[OptionalWebView] = []
   
-  open override func releaseOnDisappear(){
+  public func releaseWebviews(){
     optionalWebViews.forEach{$0.release()}
     optionalWebViews = []
-    super.releaseOnDisappear()
   }
-  
+
   /// Overwrite if necessary (eg. to inject JS instead of reloading)
   open func needsReload(webView: WebView) -> Bool { true }
   
@@ -201,17 +200,7 @@ open class WebViewCollectionVC: PageCollectionVC {
     let bottomInset = 52 + UIWindow.bottomInset
     optionalWebViews.forEach {
       if let wv = $0.webView {
-        if needsReload(webView: wv) {
-          if let url = wv.originalUrl {
-            var request = URLRequest(url: url)
-            request.cachePolicy = .reloadIgnoringLocalCacheData
-            wv.load(request)
-          }
-          else {
-            wv.reload()
-          }
-          //debug(">>> reloading webView with url: \(wv.originalUrl?.lastPathComponent ?? "[undefined URL]") ")
-        }
+        if needsReload(webView: wv) { wv.reload() }
         wv.scrollView.indicatorStyle = indicatorStyle
         wv.scrollView.scrollIndicatorInsets
         = UIEdgeInsets(top: 58, left: 0, bottom: bottomInset , right: 0)
@@ -234,7 +223,6 @@ open class WebViewCollectionVC: PageCollectionVC {
     viewProvider { [weak self] (index, oview) in
       guard let self = self else { return UIView() }
       if let ov = oview as? OptionalWebView {
-//        self.debug("viewProvider: old:\(ov.url.url.lastPathComponent) -> \(self.urls[index].url.lastPathComponent)")
         ov.webView?.scrollView.indicatorStyle = self.indicatorStyle
         ov.url = self.urls[index]
         return ov
