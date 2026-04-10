@@ -62,6 +62,23 @@ extension String {
     let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
     return emailPred.evaluate(with: self)
   }
+  
+  /// Returns a percent-encoded version of the string suitable for use in URL query values.
+  ///
+  /// This method starts from `CharacterSet.urlQueryAllowed` and removes additional characters
+  /// that should be force-encoded (e.g. "+" or "@") to ensure stricter encoding behavior.
+  ///
+  /// - Example:
+  /// ```swift
+  /// let raw = "+ @"
+  /// let encoded = raw.percentEncodedForURLQuery()
+  /// print(encoded) // "%2B%20%40"
+  /// ```
+  public func percentEncodedForURLQuery(forcingEncodingOf charactersToForceEncode: String = "+@") -> String? {
+      var allowedCharacterSet = CharacterSet.urlQueryAllowed
+      allowedCharacterSet.remove(charactersIn: charactersToForceEncode)
+      return self.addingPercentEncoding(withAllowedCharacters: allowedCharacterSet)
+  }
 }
 
 // MARK: - Localized Helper without Comment
