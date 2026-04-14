@@ -107,6 +107,8 @@ open class PageCollectionVC: UIViewController {
     super.viewWillAppear(animated)
     updateTapArea()
   }
+  
+  private var lastDisplayingIndex: Int? = nil
 
   override open func loadView() {
     super.loadView()
@@ -115,6 +117,15 @@ open class PageCollectionVC: UIViewController {
     pinBottom()
     pin(collectionView.left, to: self.view.left)
     pin(collectionView.right, to: self.view.right)
+    collectionView.isAccessibilityElement = false
+    _ = collectionView.onDisplay {[weak self] idx, _ in
+      ///prevent update twice the last index to prevent focus change loose
+      guard self?.lastDisplayingIndex != idx else { return }
+      self?.lastDisplayingIndex = idx
+      onMainAfter(0.3) {[weak self] in
+        self?.view.accessibilityElements = self?.accessibilityViews
+      }
+    }
   }
   
   open override func viewDidLoad() {
@@ -152,8 +163,10 @@ open class PageCollectionVC: UIViewController {
       guard let idx = self?.index, idx > 0 else { return }
       self?.collectionView.scrollToIndex(idx-1, animated: true)
       guard UIAccessibility.isVoiceOverRunning else { return }
-      self?.leftTapEnEdgeButton.accessibilityLabel = nil
-      onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.leftTapEnEdgeButton)}
+      let accesibilityTarget = idx > 1 ? self?.leftTapEnEdgeButton : self?.defaultAccessibilityView ?? self?.rightTapEnEdgeButton
+      ///Read new accessibility label after delay to ensure new content is available @see onDisplay above
+      ///on change to index 0 leftTapEnEdgeButton has no label, so chosse another target to prevent focus loss
+      onMainAfter(0.6){[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)}
     }
     return btn
   }()
@@ -167,17 +180,25 @@ open class PageCollectionVC: UIViewController {
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
       if self?.onRightTapClosure?() == true { return }
-      guard let idx = self?.index else { return }
-      self?.collectionView.scrollToIndex(idx+1, animated: true)
+      guard let self = self,
+            let idx = self.index,
+            idx <= self.collectionView.count - 1 else { return }
+      self.collectionView.scrollToIndex(idx + 1, animated: true)
       guard UIAccessibility.isVoiceOverRunning else { return }
-      self?.rightTapEnEdgeButton.accessibilityLabel = nil
-      onMainAfter {[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: self?.rightTapEnEdgeButton)}
+      let isLastAfterScroll = (idx + 1) >= self.collectionView.count - 1
+      let accesibilityTarget
+      = isLastAfterScroll
+      ? (self.defaultAccessibilityView ?? self.leftTapEnEdgeButton)
+      : self.rightTapEnEdgeButton
+      /// Read new accessibility label after delay to ensure new content is available @see onDisplay above
+      /// On change to last index rightTapEnEdgeButton has no label, so choose another target to prevent focus loss
+      onMainAfter(0.6){[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)}
     }
     return btn
   }()
   
   public var defaultAccessibilityView:UIView?
-  
+    
   public func updateTapArea(){
     if (edgeTapToNavigate == false || preventEdgeTapToNavigate == true)
     && UIAccessibility.isVoiceOverRunning == false {
@@ -237,3 +258,20 @@ open class PageCollectionVC: UIViewController {
     }
   }
 } // PageCollectionVC
+
+extension PageCollectionVC: AccessibilityTargetsProvider {
+  @objc open var accessibilityViews: [UIView] {
+    var elements: [UIView] = []
+    elements.appendIfPresent(defaultAccessibilityView)
+    elements.append(leftTapEnEdgeButton)
+    elements.append(rightTapEnEdgeButton)
+    elements.appendIfPresent(currentView?.activeView)
+    /** Alternative to Buttons add the nearby cells
+     //    let visibleCells = collectionView.visibleCells
+     //    let visibleIndexPaths = visibleCells.compactMap { collectionView.indexPath(for: $0) }
+     //    let sortedIndexPaths = visibleIndexPaths.sorted()
+     //    for ip in sortedIndexPaths { elements.appendIfPresent(collectionView.cellForItem(at: ip))    }
+     */
+    return elements
+  }
+}
