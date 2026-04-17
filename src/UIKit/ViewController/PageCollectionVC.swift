@@ -29,6 +29,8 @@ open class PageCollectionVC: UIViewController {
   }
   
   fileprivate var suppressExternalIndexChangesUntil: TimeInterval = 0
+  var initialIndex: Int?
+  
   
   /// Index of current view, change it to scroll to a certain cell
   open var index: Int? {
@@ -38,6 +40,9 @@ open class PageCollectionVC: UIViewController {
         return
       }
       guard let idx = newValue else { return }
+      if parent == nil {
+        initialIndex = idx
+      }
       collectionView.scrollToIndex(idx)
     }
   }
@@ -106,6 +111,10 @@ open class PageCollectionVC: UIViewController {
   open override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
     updateTapArea()
+    if let idx = initialIndex {
+      initialIndex = nil
+      collectionView.scrollToIndex(idx)
+    }
   }
   
   private var lastDisplayingIndex: Int? = nil
