@@ -62,7 +62,9 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     super.willMove(toWindow: newWindow)
     guard let idx = initialIndex,
           newWindow != nil else { return }
-    if frame == .zero { doLayout() }
+    doLayout()///required also, if frame != zero == layouted once to ensure correct offset in wv
+    ///case 1: initialIndex is set correctly especially in imagecollectionview
+    ///case 2: correct layout, top margin in webcollectionview
     initialIndex = nil
     scrollToIndex(idx, animated: false)
   }
