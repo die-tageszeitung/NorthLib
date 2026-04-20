@@ -31,7 +31,7 @@ by the cell centered within the collection view after scrolling ends.
 open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   UICollectionViewDataSource, UIScrollViewDelegate, UICollectionViewDelegateFlowLayout {
   
-  fileprivate var initialIndex: Int? = nil
+  internal var initialIndex: Int? = nil
   
   private var lastKnownSize: CGSize = .zero
 
@@ -56,6 +56,20 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   /// Defines the closure which delivers the views to display
   open func viewProvider(provider: @escaping (Int, OptionalView?)->OptionalView) {
     self.provider = provider
+  }
+  
+  open override func willMove(toWindow newWindow: UIWindow?) {
+    super.willMove(toWindow: newWindow)
+    guard let idx = initialIndex,
+          newWindow != nil else { return }
+    if frame == .zero { doLayout() }
+    initialIndex = nil
+    scrollToIndex(idx, animated: false)
+  }
+  
+  internal func setIndex(_ idx: Int) {
+    if window == nil { initialIndex = idx }
+    else{ scrollToIndex(idx, animated: false) }
   }
   
   // Scroll to the cell at position index
