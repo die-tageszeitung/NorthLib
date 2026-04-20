@@ -156,7 +156,7 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       self.overlayVC.view.pinSize(overlaySize)
       
     }
-    activeVC.addChild(overlayVC)
+//    activeVC.addChild(overlayVC)DOUBLE!
     overlayView.addSubview(contentView!)
     pin(contentView!, to: overlayView)
     if overlaySize == nil {
