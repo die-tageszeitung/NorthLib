@@ -156,6 +156,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   /// Insert a new page at (in front of) a given index
   open func insert(at idx: Int) {
     _count += 1
+    guard self.superview != nil else { return }
     var updatedIndex: Int = centerIndex ?? 0
     if idx < updatedIndex { updatedIndex += 1 }
     ///**WARNING** Inserting elements before the current index moves the focus to this item
@@ -168,6 +169,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   /// Delete a page at a given index
   open func delete(at idx: Int) {
     _count -= 1
+    guard self.superview != nil else { return }
     var updatedIndex: Int = centerIndex ?? 0
     if idx < updatedIndex { updatedIndex = max(0, updatedIndex-1) }
     deleteItems(at: [IndexPath(item: idx, section: 0)])
