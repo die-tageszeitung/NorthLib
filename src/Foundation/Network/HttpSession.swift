@@ -215,7 +215,11 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
                         URLSessionDataDelegate, DoesLog {
   
   /// Perform debug logging?
+  #if DEBUG
   public static var isDebug: Bool = true
+  #else
+  public static var isDebug: Bool = false
+  #endif
   open var isDebugLogging: Bool { return HttpSession.isDebug }
   
   public var isDownloading: Bool { return !jobs.isEmpty }
