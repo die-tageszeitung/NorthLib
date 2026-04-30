@@ -57,16 +57,20 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   open func viewProvider(provider: @escaping (Int, OptionalView?)->OptionalView) {
     self.provider = provider
   }
-  
+   
   open override func willMove(toWindow newWindow: UIWindow?) {
+    if let idx = initialIndex,
+       let nw = newWindow {
+      //Layout if bounds changed (for full with pagecollection view)
+      if nw.bounds.size.width > 0,
+         nw.bounds.size.width != frame.size.width { doLayout() }
+      ///required also, if frame != zero == layouted once to ensure correct offset in wv
+      ///case 1: initialIndex is set correctly especially in imagecollectionview
+      ///case 2: correct layout, top margin in webcollectionview
+      initialIndex = nil
+      scrollToIndex(idx, animated: false)
+    }
     super.willMove(toWindow: newWindow)
-    guard let idx = initialIndex,
-          newWindow != nil else { return }
-    doLayout()///required also, if frame != zero == layouted once to ensure correct offset in wv
-    ///case 1: initialIndex is set correctly especially in imagecollectionview
-    ///case 2: correct layout, top margin in webcollectionview
-    initialIndex = nil
-    scrollToIndex(idx, animated: false)
   }
   
   internal func setIndex(_ idx: Int) {
@@ -319,9 +323,15 @@ fileprivate class PageCell: UICollectionViewCell {
   // Add view to page cell
   private func addView(_ view: UIView, doRotate: Bool) {
     rotateView(view, doRotate: doRotate)
-    contentView.subviews.forEach { $0.removeFromSuperview() }
+    contentView.subviews.forEach {[weak self] sv in
+      if sv != self?.spinner { sv.removeFromSuperview() }
+    }
     contentView.addSubview(view)
     pin(view, to: contentView)
+    onMainAfter(1.0) {[weak self] in
+      self?.spinner.stopAnimating()
+      self?.spinner.isHidden = true
+    }
   }
   
   /// Request view from provider and put it into a PageCell
@@ -347,10 +357,27 @@ fileprivate class PageCell: UICollectionViewCell {
     }
   }
   
+  private var spinner: UIActivityIndicatorView = UIActivityIndicatorView()
+  
+  override func prepareForReuse() {
+    super.prepareForReuse()
+    spinner.startAnimating()
+    spinner.isHidden = false
+  }
+  
+  func setup(){
+    self.contentView.addSubview(spinner)
+    spinner.centerAxis()
+    spinner.isHidden = false
+    spinner.startAnimating()
+  }
+  
   override init(frame: CGRect) {
     super.init(frame: frame)
+    setup()
   }
   required init?(coder: NSCoder) {
     super.init(coder: coder)
+    setup()
   }
 } // PageCell
