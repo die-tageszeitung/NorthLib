@@ -81,7 +81,6 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   // Scroll to the cell at position index
   open func scrollToIndex(_ idx: Int, animated: Bool = false) {
     guard idx >= 0, idx < count else { return }
-    
     scrollToItem(
       at: IndexPath(item: idx, section: 0),
       at: .left,
@@ -212,7 +211,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   
   // MARK: *** Lifecycle ***
   public init(frame: CGRect, layout: UICollectionViewFlowLayout =
-    UICollectionViewFlowLayout()) {
+              PageFlowLayout()) {
     super.init(frame: frame, collectionViewLayout: layout)
     setup()
   }
@@ -381,3 +380,13 @@ fileprivate class PageCell: UICollectionViewCell {
     setup()
   }
 } // PageCell
+
+public class PageFlowLayout: UICollectionViewFlowLayout {
+  public override func invalidateLayout(with context: UICollectionViewLayoutInvalidationContext) {
+    if let context = context as? UICollectionViewFlowLayoutInvalidationContext {
+      context.invalidateFlowLayoutDelegateMetrics = true
+      context.invalidateFlowLayoutAttributes = true
+    }
+    super.invalidateLayout(with: context)
+  }
+}

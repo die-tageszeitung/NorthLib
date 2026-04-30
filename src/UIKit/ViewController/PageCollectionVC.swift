@@ -104,6 +104,17 @@ open class PageCollectionVC: UIViewController {
   }
   
   private var lastDisplayingIndex: Int? = nil
+  var lastSize: CGSize = .zero
+
+  open override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    guard let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout else { return }
+    let size = collectionView.bounds.size
+    guard size != lastSize else { return }
+    lastSize = size
+    layout.invalidateLayout()
+    scheduleResizeCompletion()
+  }
 
   override open func loadView() {
     super.loadView()
@@ -234,22 +245,52 @@ open class PageCollectionVC: UIViewController {
     }
   }
   
-  // TODO: transition/rotation better with collectionViewLayout subclass as described in:
-  // https://www.matrixprojects.net/p/uicollectionviewcell-dynamic-width/
-  open override func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
-    super.willTransition(to: newCollection, with: coordinator)
-    log(">>>> viewWillTransition coll withidx: \(collectionView.currentIndex)")
+  private var resizeWorkItem: DispatchWorkItem?
+  private var _lastIndexBeforeResize: Int?
+  private var lastIndexBeforeResize: Int? {
+    set {
+      guard _lastIndexBeforeResize == nil else { return }
+      _lastIndexBeforeResize = newValue
+    }
+    get { _lastIndexBeforeResize }
   }
-    
+  
+  private func scheduleResizeCompletion() {
+    resizeWorkItem?.cancel()
+    resizeWorkItem = DispatchWorkItem { [weak self] in
+      guard let self else { return }
+      self.finalizeResize()
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: resizeWorkItem!)
+  }
+  
+  private func finalizeResize() {
+    guard let idx = lastIndexBeforeResize else { return }
+    self.collectionView
+      .scrollToItem(at: IndexPath(item: idx, section: 0),
+                    at: .left,
+                    animated: true
+      )
+    lastIndexBeforeResize = nil
+    collectionView.alpha = 1.0
+  }
+  
   open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
     super.viewWillTransition(to: size, with: coordinator)
-    
-    let index = collectionView.currentIndex
-    
+    lastIndexBeforeResize = collectionView.currentIndex
     coordinator.animate(alongsideTransition: { [weak self] _ in
-      self?.collectionView.collectionViewLayout.invalidateLayout()
+      let context = UICollectionViewFlowLayoutInvalidationContext()
+      context.invalidateFlowLayoutDelegateMetrics = true
+      context.invalidateFlowLayoutAttributes = true
+      self?.collectionView.alpha = 0.5
+      self?.collectionView.collectionViewLayout.invalidateLayout(with: context)
     }) { [weak self] _ in
-      self?.collectionView.scrollToIndex(index, animated: false)
+      guard let idx = self?.lastIndexBeforeResize else { return }
+      self?.collectionView
+        .scrollToItem(at: IndexPath(item: idx, section: 0),
+                      at: .left,
+                      animated: false
+        )
     }
   }
 } // PageCollectionVC
