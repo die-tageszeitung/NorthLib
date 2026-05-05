@@ -100,6 +100,19 @@ public final class WebViewPager {
 
 open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   
+  // MARK: - Side Tapping
+  @Default("edgeTapToNavigate")
+  public var edgeTapToNavigate: Bool
+  
+  @Default("edgeTapToNavigateVisible2")
+  public var edgeTapToNavigateVisible2: Bool
+  
+  fileprivate var onRightTapClosure: (()->(Bool))?
+  fileprivate var onLeftTapClosure: (()->(Bool))?
+  public lazy var rightTapEnEdgeButton: UIView = { newRightTapEnEdgeButton }()
+  public lazy var leftTapEnEdgeButton: UIView = { newLeftTapEnEdgeButton }()
+  
+  // MARK: - Callback/Closure Storage
   /// The closures to call when content has been loaded
   @Callback<WebView>
   public var whenLoaded: Callback<WebView>.Store
@@ -151,6 +164,8 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     pager.indicatorStyle
   }
   
+  private var isInteracting = false
+  
   public var pager: WebViewPager
   private var initialIndex: Int?
   
@@ -169,29 +184,6 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   /// Define closure to call when a cell is newly displayed
   public func onDisplay(closure: @escaping (Int, OptionalView?)->()) -> String? {
     return pager.onDisplay(closure: closure)
-  }
-  
-  open func handleRightTap() -> Bool{
-    if UIAccessibility.isVoiceOverRunning { return false }
-    guard let sv = self.currentWebView?.scrollView,
-          sv.contentOffset.y + 2 + sv.frame.size.height < sv.contentSize.height
-    else { return false }
-    let y = min(sv.contentOffset.y + sv.frame.size.height - self.addtionalBarHeight - self.textLineHeight,
-                sv.contentSize.height - sv.frame.size.height + self.addtionalBarHeight)
-    sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
-    sv.flashScrollIndicators()
-    return true
-  }
-  
-  open func handleLeftTap() -> Bool{
-    if UIAccessibility.isVoiceOverRunning { return false }
-    guard let sv = self.currentWebView?.scrollView,
-          sv.contentOffset.y - 2 > 0
-    else { return false }
-    let y = max(sv.contentOffset.y - sv.frame.size.height + self.addtionalBarHeight + self.textLineHeight, 0)
-    sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
-    sv.flashScrollIndicators()
-    return true
   }
   
   open func reloadAllWebViews(){
@@ -243,6 +235,11 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     layoutPages()
   }
   
+  open override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    updateTapArea()
+  }
+  
   // MARK: - Setup
   
   private func setupScrollView() {
@@ -250,6 +247,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     scrollView.bounces = true
     scrollView.delegate = self
     scrollView.isDirectionalLockEnabled = true
+    scrollView.showsVerticalScrollIndicator = false
     scrollView.showsHorizontalScrollIndicator = false
     view.addSubview(scrollView)
     pin(scrollView.top, to: view.topGuide())
@@ -274,12 +272,13 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   
   open override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    if oldSize == view.bounds.size { return }///important to avoid infinite loop
+    if oldSize == view.bounds.size { return }///important to avoid loop
     oldSize = view.bounds.size
-    layoutPages(resetOffset: false) // 🔑 wichtig!
+    layoutPages(resetOffset: false)
   }
   
   private func layoutPages(resetOffset: Bool = true) {
+    guard !isInteracting else { return }   // 🔥 WICHTIG
     let w = oldSize.width
     let h = oldSize.height
     guard w > 0 else { return }
@@ -303,19 +302,13 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     
     scrollView.contentSize = CGSize(width: CGFloat(containers.count) * w, height: h)
     
-    // 👉 Content sauber zuweisen
     update(container: prevContainer, with: pager.prev)
     update(container: currentContainer, with: pager.current)
     update(container: nextContainer, with: pager.next)
     
-    // 👉 Offset nur wenn nötig
     if resetOffset {
       let targetX: CGFloat = (pager.prev != nil) ? w : 0
       scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: false)
-      log("-->layoutPages resetOffset setContentOffset to x: \(targetX) for containers.count: \(containers.count)")
-    }
-    else {
-      log("-->layoutPages no resetOffset for containers.count: \(containers.count)")
     }
   }
   
@@ -326,23 +319,33 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     }
     
     container.isHidden = false
-    
     if view.superview !== container {
-      container.subviews.forEach { $0.removeFromSuperview() }
-      
-      view.frame = container.bounds
-      container.addSubview(view)
+      DispatchQueue.main.async {
+        container.subviews.forEach {
+          if let wv = $0 as? WebView { wv.release() }
+          $0.removeFromSuperview()
+        }
+        view.frame = container.bounds
+        container.addSubview(view)
+      }
     } else {
       view.frame = container.bounds
     }
   }
   
+  public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+      isInteracting = true
+  }
+  
   public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-    commitPaging()
+      isInteracting = false
+      commitPaging()
   }
   
   public func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-    commitPaging()
+      isInteracting = false
+      commitPaging()
+
   }
   
   public func scrollViewWillEndDragging(_ scrollView: UIScrollView,
@@ -351,20 +354,9 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
        let w = scrollView.bounds.width
        let targetX = targetContentOffset.pointee.x
        let centerX: CGFloat = (pager.prev != nil) ? w : 0
-       if targetX > centerX {
-           pendingDirection = .forward
-           log("→ forward center:\(centerX) target:\(targetX)")
-       }
-       else if targetX < centerX {
-           pendingDirection = .backward
-           log("→ backward center:\(centerX) target:\(targetX)")
-       }
-       else {
-           pendingDirection = .none
-           log("→ none center:\(centerX) target:\(targetX)")
-       }
-       // 👉 snap zurück zur aktuellen Seite
-//       targetContentOffset.pointee.x = centerX
+       if targetX > centerX { pendingDirection = .forward }
+       else if targetX < centerX { pendingDirection = .backward }
+       else { pendingDirection = .none }
    }
   
   private enum PageDirection {  case none, forward, backward  }
@@ -373,25 +365,10 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   private func commitPaging() {
     switch pendingDirection {
       case .forward:
-        if pager.currentIndex < pager.urls.count - 1 {
-          pager.moveForward()
-          log("-->commitPaging moved forward to index \(pager.currentIndex)")
-        }
-        else {
-          log("-->commitPaging moved forward skip")
-        }
+        if pager.currentIndex < pager.urls.count - 1 { pager.moveForward() }
       case .backward:
-        if pager.currentIndex > 0 {
-          pager.moveBackward()
-          log("-->commitPaging moved backward to index \(pager.currentIndex)")
-        }
-        else {
-          log("-->commitPaging moved backward skip")
-        }
-        
-      case .none:
-        log("-->commitPaging no move")
-        break
+        if pager.currentIndex > 0 { pager.moveBackward() }
+      case .none:  break
     }
     pendingDirection = .none
     layoutPages()
@@ -399,15 +376,25 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   
   // MARK: - External Navigation
   public func scrollTo(index: Int, animated: Bool = false) {
-    guard index >= 0, index < pager.urls.count else { return }
-    pager.setup(at: index)
-    layoutPages()
-    if animated {
-      scrollView.setContentOffset(
-        CGPoint(x: scrollView.bounds.width, y: 0),
-        animated: true
-      )
-    }
+      guard index >= 0, index < pager.urls.count else { return }
+      let diff = index - pager.currentIndex
+      // 👉 Nur EIN Schritt → animieren
+      if animated && abs(diff) == 1 {
+          pendingDirection = diff > 0 ? .forward : .backward
+        let w = scrollView.bounds.width
+        let currentX = scrollView.contentOffset.x
+        let targetX: CGFloat = diff > 0
+            ? currentX + w   // nach rechts → next
+            : currentX - w   // nach links → prev
+          scrollView.setContentOffset(
+              CGPoint(x: targetX, y: 0),
+              animated: true
+          )
+      } else {
+          // 👉 Mehr als 1 Schritt → direkt springen
+          pager.setup(at: index)
+          layoutPages()
+      }
   }
   
   // MARK: - WebView Setup Hook
@@ -451,39 +438,130 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   }
 }
 
-//extension WebPagerVC {
-//  open func handleRightTap() -> Bool{
-//    if UIAccessibility.isVoiceOverRunning { return false }
-//    guard let sv = self.currentWebView?.scrollView,
-//          sv.contentOffset.y + 2 + sv.frame.size.height < sv.contentSize.height
-//    else { return false }
-//    let y = min(sv.contentOffset.y + sv.frame.size.height - self.addtionalBarHeight - self.textLineHeight,
-//                sv.contentSize.height - sv.frame.size.height + self.addtionalBarHeight)
-//    sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
-//    sv.flashScrollIndicators()
-//    return true
-//  }
-//
-//  open func handleLeftTap() -> Bool{
-//    if UIAccessibility.isVoiceOverRunning { return false }
-//    guard let sv = self.currentWebView?.scrollView,
-//    sv.contentOffset.y - 2 > 0
-//    else { return false }
-//    let y = max(sv.contentOffset.y - sv.frame.size.height + self.addtionalBarHeight + self.textLineHeight, 0)
-//    sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
-//    sv.flashScrollIndicators()
-//    return true
-//  }
-//}
-
-
-
-//  public func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-//    guard gestureRecognizer === scrollView.panGestureRecognizer else {
-//      return true
-//    }
-//    let velocity = scrollView.panGestureRecognizer.velocity(in: scrollView)
-//    // 👉 nur starten wenn horizontal dominiert
-//    return abs(velocity.x) > abs(velocity.y)
-//  }
-//}
+/// Side Tapping
+extension WebPagerVC {
+  public func updateTapArea(){
+    if edgeTapToNavigate == false
+    && UIAccessibility.isVoiceOverRunning == false {
+      leftTapEnEdgeButton.isHidden = true
+      rightTapEnEdgeButton.isHidden = true
+      return
+    }
+    
+    leftTapEnEdgeButton.isHidden = false
+    rightTapEnEdgeButton.isHidden = false
+    
+    leftTapEnEdgeButton.backgroundColor
+    = edgeTapToNavigateVisible2
+    ? UIColor.gray.withAlphaComponent(0.15)
+    : .clear
+    leftTapEnEdgeButton.layer.borderColor
+    = edgeTapToNavigateVisible2
+    ? UIColor.gray.withAlphaComponent(0.25).cgColor
+    : UIColor.clear.cgColor
+    
+    rightTapEnEdgeButton.backgroundColor
+    = edgeTapToNavigateVisible2
+    ? UIColor.gray.withAlphaComponent(0.15)
+    : .clear
+    rightTapEnEdgeButton.layer.borderColor
+    = edgeTapToNavigateVisible2
+    ? UIColor.gray.withAlphaComponent(0.25).cgColor
+    : UIColor.clear.cgColor
+    
+    if leftTapEnEdgeButton.superview == nil {
+      self.view.addSubview(leftTapEnEdgeButton)
+      pin(leftTapEnEdgeButton, to: self.view, exclude: .right)
+    }
+    
+    if rightTapEnEdgeButton.superview == nil {
+      self.view.addSubview(rightTapEnEdgeButton)
+      pin(rightTapEnEdgeButton, to: self.view, exclude: .left)
+    }
+  }
+  
+  @objc open func handleRightTap() -> Bool{
+    if UIAccessibility.isVoiceOverRunning { return false }
+    guard let sv = self.currentWebView?.scrollView,
+          sv.contentOffset.y + 2 + sv.frame.size.height < sv.contentSize.height
+    else { return false }
+    let y = min(sv.contentOffset.y + sv.frame.size.height - self.addtionalBarHeight - self.textLineHeight,
+                sv.contentSize.height - sv.frame.size.height + self.addtionalBarHeight)
+    sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
+    sv.flashScrollIndicators()
+    return true
+  }
+  
+  @objc open func handleLeftTap() -> Bool{
+    if UIAccessibility.isVoiceOverRunning { return false }
+    guard let sv = self.currentWebView?.scrollView,
+          sv.contentOffset.y - 2 > 0
+    else { return false }
+    let y = max(sv.contentOffset.y - sv.frame.size.height + self.addtionalBarHeight + self.textLineHeight, 0)
+    sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
+    sv.flashScrollIndicators()
+    return true
+  }
+  
+  /// primary right tap handler for right edge tap, is available, add scroll or zoom behaviour if needed
+  /// - Parameter closure: closure to call; return true if event handled and index not needed to change
+  public func onRightTap(closure: @escaping ()->(Bool)) {
+    onRightTapClosure = closure
+  }
+  /// primary left tap handler for right edge tap, is available, add scroll or zoom behaviour if needed
+  /// - Parameter closure: closure to call; return true if event handled and index not needed to change
+  public func onLeftTap(closure: @escaping ()->(Bool)) {
+    onLeftTapClosure = closure
+  }
+  
+  
+  private var tapEnEdgeButtonWidth: CGFloat { 28.0 }
+  
+  fileprivate var newLeftTapEnEdgeButton: UIView {
+    let btn = UIView()
+    btn.pinWidth(tapEnEdgeButtonWidth)
+    btn.isAccessibilityElement = true
+    btn.accessibilityLabel = "zurück"
+    btn.accessibilityTraits = .button
+    btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
+    btn.addBorder(.gray.withAlphaComponent(0.25))
+    btn.onTapping {[weak self] _ in
+      if self?.onLeftTapClosure?() == true { return }
+      guard let idx = self?.index, idx > 0 else { return }
+      self?.scrollTo(index: idx-1, animated: true)
+//      guard UIAccessibility.isVoiceOverRunning else { return }
+//      let accesibilityTarget = idx > 1 ? self?.leftTapEnEdgeButton : self?.defaultAccessibilityView ?? self?.rightTapEnEdgeButton
+//      ///Read new accessibility label after delay to ensure new content is available @see onDisplay above
+//      ///on change to index 0 leftTapEnEdgeButton has no label, so chosse another target to prevent focus loss
+//      onMainAfter(0.6){[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)}
+    }
+    return btn
+  }
+  
+  fileprivate var newRightTapEnEdgeButton: UIView {
+    let btn = UIView()
+    btn.pinWidth(tapEnEdgeButtonWidth)
+    btn.isAccessibilityElement = true
+    btn.accessibilityLabel = "weiter"
+    btn.accessibilityTraits = .button
+    btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
+    btn.addBorder(.gray.withAlphaComponent(0.25))
+    btn.onTapping {[weak self] _ in
+      if self?.onRightTapClosure?() == true { return }
+      guard let self = self,
+            self.index <= self.pager.urls.count - 1 else { return }
+      self.scrollTo(index: self.index + 1, animated: true)
+//      guard UIAccessibility.isVoiceOverRunning else { return }
+//      let isLastAfterScroll = (idx + 1) >= self.collectionView.count - 1
+//      let accesibilityTarget
+//      = isLastAfterScroll
+//      ? (self.defaultAccessibilityView ?? self.leftTapEnEdgeButton)
+//      : self.rightTapEnEdgeButton
+//      /// Read new accessibility label after delay to ensure new content is available @see onDisplay above
+//      /// On change to last index rightTapEnEdgeButton has no label, so choose another target to prevent focus loss
+//      onMainAfter(0.6){[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)}
+    }
+    return btn
+  }
+  
+}
