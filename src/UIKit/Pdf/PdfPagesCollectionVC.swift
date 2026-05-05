@@ -143,17 +143,6 @@ open class PdfPagesCollectionVC : ImageCollectionVC, CanRotate{
         return ziv
       }
     }
-    /*...ToDo: disable this, disables the black page 
-    onEndDisplayCell { (_, optionalView) in
-      guard let ziv = optionalView as? ZoomedImageView,
-            let _pdfImg = ziv.optionalImage as? ZoomedPdfImageSpec else { return }
-      var pdfImg = _pdfImg
-      if ziv.imageView.image == pdfImg.image {
-        pdfImg.image = nil
-        ziv.imageView.image = nil
-      }
-    }*/
-    
     onDisplay { [weak self] (idx, optionalView) in
       guard let ziv = optionalView as? ZoomedImageView,
             let pdfImg = ziv.optionalImage as? ZoomedPdfImageSpec else { return }

@@ -23,14 +23,17 @@ open class PageCollectionVC: UIViewController {
   public var invalidateLayoutNeededOnViewWillAppear:Bool = false
   
   // View which is currently displayed
-  public var currentView: OptionalView? { 
-    if let i = index { return collectionView.optionalView(at: i) }
+  public var currentView: OptionalView? {
+    if let i = index {
+      log("=> PCVC.currentView: \(i)")
+      return collectionView.optionalView(at: i)
+    }
     else { return nil }
   }
   
   /// Index of current view, change it to scroll to a certain cell
   open var index: Int? {
-    get { collectionView.currentIndex }
+    get { collectionView.lastIndex }
     set {
       guard let idx = newValue else { return }
       collectionView.setIndex(idx)
@@ -79,11 +82,6 @@ open class PageCollectionVC: UIViewController {
     collectionView.removeOnDisplay(forKey: forKey)
   }
   
-  /// Define closure to call when a cell is newly displayed
-  public func onEndDisplayCell(closure: @escaping (Int, OptionalView?)->()) {
-    collectionView.onEndDisplayCell(closure: closure)
-  }
-    
   /// Defines the closure which delivers the views to display
   open func viewProvider(provider: @escaping (Int, OptionalView?)->OptionalView) {
     collectionView.viewProvider(provider: provider)
@@ -103,7 +101,7 @@ open class PageCollectionVC: UIViewController {
     updateTapArea()
   }
   
-  private var lastDisplayingIndex: Int? = nil
+  var lastDisplayingIndex: Int? = nil
   var lastSize: CGSize = .zero
 
   open override func viewDidLayoutSubviews() {
@@ -115,7 +113,7 @@ open class PageCollectionVC: UIViewController {
     layout.invalidateLayout()
     scheduleResizeCompletion()
   }
-
+  
   override open func loadView() {
     super.loadView()
     self.view.addSubview(collectionView)
@@ -137,6 +135,7 @@ open class PageCollectionVC: UIViewController {
   open override func viewDidLoad() {
     super.viewDidLoad()
     updateTapArea()
+    collectionView.parentName = "\(type(of: self))"
   }
   
   private var onRightTapClosure: (()->(Bool))?
@@ -250,6 +249,7 @@ open class PageCollectionVC: UIViewController {
   private var lastIndexBeforeResize: Int? {
     set {
       guard _lastIndexBeforeResize == nil else { return }
+      self.log("=> remember _lastIndexBeforeResize: \(_lastIndexBeforeResize)")
       _lastIndexBeforeResize = newValue
     }
     get { _lastIndexBeforeResize }
@@ -266,26 +266,41 @@ open class PageCollectionVC: UIViewController {
   
   private func finalizeResize() {
     guard let idx = lastIndexBeforeResize else { return }
+    self.log("=> vc.finalizeResize set index: \(idx) \(type(of: self))")
     self.collectionView
       .scrollToItem(at: IndexPath(item: idx, section: 0),
-                    at: .left,
-                    animated: true
+                    at: .centeredHorizontally,
+                    animated: false
       )
-    lastIndexBeforeResize = nil
-    collectionView.alpha = 1.0
+    collectionView.resizing = false
+    _lastIndexBeforeResize = nil
+    (self as? WebViewCollectionVC)?.suppressLinkPressedNotification = false
+//    (self as? WebViewCollectionVC)?.optionalWebViews.forEach({ wv in
+////      wv.suppressLinkPressedNotification = false
+//    })
   }
   
   open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
     super.viewWillTransition(to: size, with: coordinator)
-    lastIndexBeforeResize = collectionView.currentIndex
+    collectionView.resizing = true
+    (self as? WebViewCollectionVC)?.suppressLinkPressedNotification = true
+//    (self as? WebViewCollectionVC)?.currentWebView?
+//      .suppressLinkPressedNotification = true
+//    (self as? WebViewCollectionVC)?.optionalWebViews?.forEach({ wv in
+//      wv.suppressLinkPressedNotification = true
+//    })
+//    let li = collectionView.currentIndex123
+    let li = collectionView.currentIndex
+    lastIndexBeforeResize = li
+    self.log("=> vc.vwt: \(lastIndexBeforeResize ?? -1) <= \(li)")
     coordinator.animate(alongsideTransition: { [weak self] _ in
       let context = UICollectionViewFlowLayoutInvalidationContext()
       context.invalidateFlowLayoutDelegateMetrics = true
       context.invalidateFlowLayoutAttributes = true
-      self?.collectionView.alpha = 0.5
       self?.collectionView.collectionViewLayout.invalidateLayout(with: context)
     }) { [weak self] _ in
       guard let idx = self?.lastIndexBeforeResize else { return }
+      self?.log("=> vc.viewWillTransition finalize set index: \(idx)")
       self?.collectionView
         .scrollToItem(at: IndexPath(item: idx, section: 0),
                       at: .left,

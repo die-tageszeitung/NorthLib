@@ -33,6 +33,8 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   
   internal var initialIndex: Int? = nil
   
+  var parentName = "unknown"
+  
   private var lastKnownSize: CGSize = .zero
 
   /// scroll from left to right or vice versa
@@ -73,7 +75,19 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     super.willMove(toWindow: newWindow)
   }
   
+  public var currentIndex: Int {
+      let center = CGPoint(
+          x: contentOffset.x + bounds.width / 2,
+          y: bounds.height / 2
+      )
+    let idx = indexPathForItem(at: center)?.item ?? 0
+    self.log("=> currentIndex: \(idx)")
+    return idx
+  }
+  
   internal func setIndex(_ idx: Int) {
+    self.log("=> pagecolview.setIndex: \(idx) skip?:\(resizing)")
+    guard resizing == false else { return }
     if window == nil { initialIndex = idx }
     else{ scrollToIndex(idx, animated: false) }
   }
@@ -86,23 +100,10 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
       at: .left,
       animated: animated
     )
+    log("=> cv.scrollToIndex: \(idx)")
     callOnDisplay(idx: idx, oview: optionalView(at: idx))
   }
   
-  public var currentIndex: Int {
-    let center = CGPoint(
-      x: contentOffset.x + bounds.width / 2,
-      y: bounds.midY
-    )
-    
-    return indexPathForItem(at: center)?.item ?? 0
-  }
-  
-  fileprivate var centerIndex: Int? {
-    let center = CGPoint(x: bounds.midX + contentOffset.x, y: bounds.midY)
-    return indexPathForItem(at: center)?.item
-  }
-    
   // Setup the PCV
   private func setup() {
     guard let layout = self.collectionViewLayout as? UICollectionViewFlowLayout
@@ -128,7 +129,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   
   /// Returns the optional view at a given index (if that view is visible)
   open func optionalView(at oidx: Int? = nil) -> OptionalView? {
-    let idx = oidx ?? currentIndex
+    let idx = oidx ?? lastIndex ?? 0
     
     if let cell = cellForItem(at: IndexPath(item: idx, section: 0)) as? PageCell {
       if let ziv = cell.page as? ZoomedImageView {
@@ -159,8 +160,9 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   /// Insert a new page at (in front of) a given index
   open func insert(at idx: Int) {
     _count += 1
-    guard self.superview != nil else { return }
-    var updatedIndex: Int = centerIndex ?? 0
+    guard self.superview != nil,
+          var updatedIndex: Int = lastIndex else { return }
+
     if idx < updatedIndex { updatedIndex += 1 }
     ///**WARNING** Inserting elements before the current index moves the focus to this item
     ///no matter if flag remembersLastFocusedIndexPath is set
@@ -172,8 +174,9 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   /// Delete a page at a given index
   open func delete(at idx: Int) {
     _count -= 1
-    guard self.superview != nil else { return }
-    var updatedIndex: Int = centerIndex ?? 0
+    guard self.superview != nil,
+          var updatedIndex: Int = lastIndex else { return }
+
     if idx < updatedIndex { updatedIndex = max(0, updatedIndex-1) }
     deleteItems(at: [IndexPath(item: idx, section: 0)])
     callOnDisplay(idx: updatedIndex, oview: optionalView(at: updatedIndex))
@@ -197,17 +200,18 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     onDisplayClosures[forKey] = nil
   }
   
-  // closure to execute on end display
-  fileprivate var onEndDisplayClosures: [(Int, OptionalView?)->()] = []
+  public private(set) var lastIndex: Int?
+  var resizing = false { didSet { self.alpha = resizing ? 0.5 : 1 }}
   
-  /// Define closure to call when a cell is not displayed
-  public func onEndDisplayCell(closure: @escaping (Int, OptionalView?)->()) {
-    onEndDisplayClosures += closure
-  }
-
   /// Call all onDisplay closures
-  fileprivate func callOnDisplay(idx: Int, oview: OptionalView?)
-  { for cl in onDisplayClosures.values { cl(idx, oview) } }
+  fileprivate func callOnDisplay(idx: Int, oview: OptionalView?){
+    guard resizing == false,
+          lastIndex != idx else { return }
+    lastIndex = idx
+    ///WARNING CURRENT INDEX IS SOMETIMES WRONG!!
+    log("=> cv.callOnDisplay lastIndex: \(idx) currentIndex: \(currentIndex)")
+    for cl in onDisplayClosures.values { cl(idx, oview) }
+  }
   
   // MARK: *** Lifecycle ***
   public init(frame: CGRect, layout: UICollectionViewFlowLayout =
@@ -225,20 +229,6 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
 } // PageCollectionView
 
 
-// MARK: - UICollectionViewDelegate -
-extension PageCollectionView {
-  public func collectionView(_ collectionView: UICollectionView,
-                             didEndDisplaying cell: UICollectionViewCell,
-                             forItemAt indexPath: IndexPath) {
-    guard let pageCell = cell as? PageCell else {
-      return
-    }
-    for cl in onEndDisplayClosures {
-      cl(indexPath.row, pageCell.page)
-    }
-  }
-
-}
 // MARK: - UICollectionViewDataSource -
 extension PageCollectionView {
   open func numberOfSections(in collectionView: UICollectionView) -> Int { 1 }
@@ -251,7 +241,7 @@ extension PageCollectionView {
       .dequeueReusableCell(withReuseIdentifier: PageCollectionView.reuseCellId,
                            for: indexPath) as? PageCell {
       let itemIndex = indexPath.item
-      debug("index \(itemIndex) requested in cell \(address(cell))")
+      debug("+=> cellForItemAt \(itemIndex) requested returning cell \(address(cell)) for parent: \(parentName)")
       cell.update(pcv: self, idx: itemIndex)
       return cell
     }
@@ -274,12 +264,14 @@ extension PageCollectionView {
   public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
     if !decelerate {
       let idx = currentIndex
+      log("=> cv.scrollViewDidEndDragging: \(idx)")
       callOnDisplay(idx: idx, oview: optionalView(at: idx))
     }
   }
   
   public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
     let idx = currentIndex
+    log("=> cv.scrollViewDidEndDecelerating: \(idx)")
     callOnDisplay(idx: idx, oview: optionalView(at: idx))
   }
   
@@ -289,10 +281,8 @@ extension PageCollectionView {
                                         targetContentOffset: UnsafeMutablePointer<CGPoint>) {
     let center = CGPoint(x: targetContentOffset.pointee.x, y: bounds.midY)
     guard let idx = indexPathForItem(at: center)?.item else { return }
+    log("=> cv.scrollViewWillEndDragging: \(idx)")
     callOnDisplay(idx: idx, oview: optionalView(at: idx))
-  }
-  
-  public func scrollViewDidScroll(_ scrollView: UIScrollView) {
   }
 }
 

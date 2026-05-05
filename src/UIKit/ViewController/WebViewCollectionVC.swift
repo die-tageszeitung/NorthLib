@@ -39,6 +39,7 @@ class OptionalWebView: OptionalView, DoesLog {
   }
   
   fileprivate func urlChanged() {
+    log("=> WebColVc.OWV.urlChanged: \(url.url.lastPathComponent)")
     if let webView = self.webView { webView.stopLoading() }
     else { createWebView() }
     if isAvailable { loadView() }
@@ -73,7 +74,8 @@ class OptionalWebView: OptionalView, DoesLog {
       webView.isInspectable = true
     }
     webView.baseDir = baseDir
-    webView.whenLoaded { [weak self] _ in
+    webView.whenLoaded { [weak self] param in
+      self?.log("=> WebColVc.OWV.createWebView.whenLoaded: \(param)")
       self?.$whenAvailable.notify(sender: self)
     }
   }
@@ -162,7 +164,35 @@ open class WebViewCollectionVC: PageCollectionVC {
     }
   }
   
+  override var lastDisplayingIndex: Int? {
+    didSet {
+      guard let idx = lastDisplayingIndex else { return }
+      pruneCache(around: idx)
+    }
+  }
+  
+  public var suppressLinkPressedNotification: Bool = false {
+    didSet {
+      cache.forEach{(_,val) in
+        val.webView?.suppressLinkPressedNotification
+        = suppressLinkPressedNotification
+      }
+//      optionalWebViews.forEach{
+//        $0.webView?.suppressLinkPressedNotification
+//        = suppressLinkPressedNotification
+//      }
+    }
+  }
+  
   public func gotoUrl(url: URL) {
+    guard suppressLinkPressedNotification == false else {
+      log("=> NOT gotoUrl: suppressLinkPressedNotification is active, ignoring gotoUrl: \(url.lastPathComponent)")
+      return
+    }
+//    guard currentWebView?.suppressLinkPressedNotification == false else {
+//      log("=> NOT gotoUrl: suppressLinkPressedNotification is active, ignoring gotoUrl: \(url.lastPathComponent)")
+//      return
+//    }
     if urls.count == 0 { self.initialUrl = url; return }
     var idx = 0
     debug("searching for: \(url.lastPathComponent)")
@@ -186,11 +216,13 @@ open class WebViewCollectionVC: PageCollectionVC {
     gotoUrl(path + "/" + file)
   }
   
-  var optionalWebViews:[OptionalWebView] = []
+//  var optionalWebViews:[OptionalWebView] = []
+  
+  var cache: [Int: OptionalWebView] = [:]
   
   public func releaseWebviews(){
-    optionalWebViews.forEach{$0.release()}
-    optionalWebViews = []
+    cache.forEach{(_,val) in val.release()}
+    cache = [:]
   }
 
   /// Overwrite if necessary (eg. to inject JS instead of reloading)
@@ -198,8 +230,8 @@ open class WebViewCollectionVC: PageCollectionVC {
   
   open func reloadAllWebViews(){
     let bottomInset = 52 + UIWindow.bottomInset
-    optionalWebViews.forEach {
-      if let wv = $0.webView {
+    cache.forEach{(_,val) in
+      if let wv = val.webView {
         if needsReload(webView: wv) { wv.reload() }
         wv.scrollView.indicatorStyle = indicatorStyle
         wv.scrollView.scrollIndicatorInsets
@@ -220,25 +252,64 @@ open class WebViewCollectionVC: PageCollectionVC {
     onRightTap {[weak self] in
       return self?.handleRightTap() ?? false
     }
-    viewProvider { [weak self] (index, oview) in
-      guard let self = self else { return UIView() }
-      if let ov = oview as? OptionalWebView {
-        ov.webView?.scrollView.indicatorStyle = self.indicatorStyle
-        ov.url = self.urls[index]
-        return ov
-      }
-      else {
-        let owv = OptionalWebView(url: self.urls[index], baseDir: self.baseDir)
-//        self.debug("viewProvider: new -> \(owv.url.url.lastPathComponent)")
-        self.initWebView(oView: owv)
-        let bottomInset = 52 + UIWindow.bottomInset
-        owv.webView?.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 58, left: 0, bottom: bottomInset, right: 0)
-        self.optionalWebViews.append(owv)
-        if let bridge = self.bridge {
-          owv.webView?.addBridge(bridge)
-          owv.webView?.scrollView.indicatorStyle = self.indicatorStyle
+    ///WARNING IGNORE oview in viewProvider completely and use only index to manage WebViews
+    viewProvider { [weak self] (index, _) in
+        guard let self = self else { return UIView() }
+        // ✅ 1. existierende WebView für diesen Index?
+        if let cached = self.cache[index] {
+            return cached
         }
+        // ❌ IGNORIERE oview komplett
+        // (das ist der wichtigste Fix)
+        let owv = OptionalWebView(url: self.urls[index], baseDir: self.baseDir)
+//        self.initWebView(oView: owv)
+        let bottomInset = 52 + UIWindow.bottomInset
+
+        owv.webView?.scrollView.scrollIndicatorInsets =
+
+            UIEdgeInsets(top: 58, left: 0, bottom: bottomInset, right: 0)
+
+        if let bridge = self.bridge {
+            owv.webView?.addBridge(bridge)
+            owv.webView?.scrollView.indicatorStyle = self.indicatorStyle
+        }
+
+        // ✅ speichern
+        self.cache[index] = owv
         return owv
+    }
+//    viewProvider { [weak self] (index, oview) in
+//      guard let self = self else { return UIView() }
+//      if let ov = oview as? OptionalWebView {
+//        ov.webView?.scrollView.indicatorStyle = self.indicatorStyle
+//        ov.url = self.urls[index]
+//        return ov
+//      }
+//      else {
+//        let owv = OptionalWebView(url: self.urls[index], baseDir: self.baseDir)
+////        self.debug("viewProvider: new -> \(owv.url.url.lastPathComponent)")
+//        self.initWebView(oView: owv)
+//        let bottomInset = 52 + UIWindow.bottomInset
+//        owv.webView?.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 58, left: 0, bottom: bottomInset, right: 0)
+//        self.optionalWebViews.append(owv)
+//        if let bridge = self.bridge {
+//          owv.webView?.addBridge(bridge)
+//          owv.webView?.scrollView.indicatorStyle = self.indicatorStyle
+//        }
+//        return owv
+//      }
+//    }
+  }
+  
+  func pruneCache(around index: Int) {
+    let allowed = Set([index - 1, index, index + 1])
+    cache.keys.forEach { key in
+      if !allowed.contains(key) {
+        if let wv = cache[key]?.webView {
+          wv.stopLoading()
+          wv.release()
+        }
+        cache.removeValue(forKey: key)
       }
     }
   }
@@ -264,7 +335,6 @@ open class WebViewCollectionVC: PageCollectionVC {
     sv.setContentOffset(CGPoint(x: 0, y: y), animated: true)
     sv.flashScrollIndicators()
     return true
-    
   }
   
   func initWebView(oView: OptionalWebView) {
@@ -309,7 +379,7 @@ open class WebViewCollectionVC: PageCollectionVC {
 }
 
 
-fileprivate extension URL {
+extension URL {
   var nonPublicURL:URL {
     return URL(fileURLWithPath: self.absoluteString.replacingOccurrences(of: ".public.", with: "."))
   }
