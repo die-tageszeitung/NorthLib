@@ -12,13 +12,9 @@ import UIKit
 
 // MARK: - Pager (3 WebViews max)
 
-public final class WebViewPager {
+public final class WebViewPager: DoesLog {
   
-  fileprivate(set) var currentIndex: Int = 0 {
-    didSet {
-      for cl in onDisplayClosures.values { cl(currentIndex, nil) }
-    }
-  }
+  fileprivate var currentIndex: Int = 0
   
   // An array of closures, each is to call when the displayed page changes
   fileprivate var onDisplayClosures: [String:(Int, OptionalView?)->()] = [:]
@@ -56,6 +52,48 @@ public final class WebViewPager {
     self.baseDir = baseDir
   }
   
+  private func rebuildAroundCurrent() {
+    guard !urls.isEmpty else {
+      prev = nil
+      current = nil
+      next = nil
+      return
+    }
+
+    let idx = currentIndex
+
+    current = make(index: idx)
+    prev = idx > 0 ? make(index: idx - 1) : nil
+    next = idx < urls.count - 1 ? make(index: idx + 1) : nil
+
+    notifyDisplay()
+  }
+  
+  public func insert(url: WebViewUrl, at index: Int) {
+    let safeIndex = max(0, min(urls.count, index))
+    assert(safeIndex == index, "Invalid insert index \(index)")
+    if safeIndex != index { log("ERROR: clamped index \(index) -> \(safeIndex)") }
+    urls.insert(url, at: safeIndex)
+    if safeIndex <= currentIndex {
+      currentIndex += 1
+    }
+    rebuildAroundCurrent()
+  }
+  
+  public func delete(at index: Int) {
+    guard index < urls.count else { return }
+
+    urls.remove(at: index)
+
+    if index < currentIndex {
+      currentIndex -= 1
+    } else if index == currentIndex {
+      // 👉 aktuelles Element gelöscht
+      currentIndex = min(currentIndex, urls.count - 1)
+    }
+    rebuildAroundCurrent()
+  }
+  
   private func make(index: Int) -> OptionalWebView {
     let owv = OptionalWebView(url: urls[index], baseDir: baseDir)
     initWebView?(owv)
@@ -67,11 +105,15 @@ public final class WebViewPager {
     return owv
   }
   
+  private func notifyDisplay() {
+    for cl in onDisplayClosures.values { cl(currentIndex, nil) }
+  }
+  
   func setup(at index: Int) {
     currentIndex = index
     
     current = make(index: index)
-    
+    notifyDisplay()
     prev = (index > 0) ? make(index: index - 1) : nil
     next = (index < urls.count - 1) ? make(index: index + 1) : nil
   }
@@ -85,6 +127,7 @@ public final class WebViewPager {
     
     let newIndex = currentIndex + 1
     next = (newIndex < urls.count) ? make(index: newIndex) : nil
+    notifyDisplay()
   }
   
   func moveBackward() {
@@ -96,6 +139,7 @@ public final class WebViewPager {
     
     let newIndex = currentIndex - 1
     prev = (newIndex >= 0) ? make(index: newIndex) : nil
+    notifyDisplay()
   }
 }
 
@@ -199,16 +243,22 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
       }
     }
   }
+  
+  public func gotoIndex(index: Int) {
+    if self.view.window != nil {
+      self.scrollTo(index: index)
+    }
+    else {
+      initialIndex = index
+    }
+  }
+  
+  
   public func gotoUrl(url: URL) {
     var idx = 0
     for u in pager.urls {
       if u.url.nonPublicURL == url.nonPublicURL {
-        if self.view.window != nil {
-          self.scrollTo(index: idx)
-        }
-        else {
-          initialIndex = idx
-        }
+        gotoIndex(index: idx)
         debug("found at index: \(idx)")
         return
       }
@@ -488,6 +538,18 @@ extension WebPagerVC {
   }
 }
 
+extension WebPagerVC {
+  public func insert(wwurl: WebViewUrl, at index: Int) {
+    pager.insert(url: wwurl, at: index)
+    layoutPages()
+  }
+  public func delete(at index: Int) {
+    pager.delete(at: index)
+    layoutPages()
+  }
+  
+}
+
 /// Side Tapping
 extension WebPagerVC {
   public func updateTapArea(){
@@ -605,5 +667,4 @@ extension WebPagerVC {
     }
     return btn
   }
-  
 }
