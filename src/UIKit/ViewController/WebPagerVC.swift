@@ -107,8 +107,6 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   @Default("edgeTapToNavigateVisible2")
   public var edgeTapToNavigateVisible2: Bool
   
-  fileprivate var onRightTapClosure: (()->(Bool))?
-  fileprivate var onLeftTapClosure: (()->(Bool))?
   public lazy var rightTapEnEdgeButton: UIView = { newRightTapEnEdgeButton }()
   public lazy var leftTapEnEdgeButton: UIView = { newLeftTapEnEdgeButton }()
   
@@ -154,6 +152,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   public let scrollView = UIScrollView()
   
   public var index: Int { pager.currentIndex }
+  public var count: Int { pager.urls.count }
   
   /// The bridge (if any) to use for JS interaction
   public var bridge: JSBridgeObject? {
@@ -278,7 +277,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   }
   
   private func layoutPages(resetOffset: Bool = true) {
-    guard !isInteracting else { return }   // 🔥 WICHTIG
+    guard !isInteracting else { return } ///important!
     let w = oldSize.width
     let h = oldSize.height
     guard w > 0 else { return }
@@ -295,7 +294,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
       containers.append(nextContainer)
     }
     
-    // Frames setzen
+    // set frames for containers
     for (i, container) in containers.enumerated() {
       container.frame = CGRect(x: CGFloat(i) * w, y: 0, width: w, height: h)
     }
@@ -414,7 +413,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
 
     pendingDirection = .none
 
-    // 👉 Nur wenn sich wirklich was geändert hat
+    // only layout pages after change
     if pager.currentIndex != oldIndex {
       layoutPages()
     }
@@ -424,7 +423,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   public func scrollTo(index: Int, animated: Bool = false) {
     guard index >= 0, index < pager.urls.count else { return }
     let diff = index - pager.currentIndex
-    // 👉 Nur EIN Schritt → animieren
+    /// only scroll animate for 1 ondex jumps
     if animated && abs(diff) == 1 {
       pendingDirection = diff > 0 ? .forward : .backward
       let w = scrollView.bounds.width
@@ -437,7 +436,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
         animated: true
       )
     } else {
-      // 👉 Mehr als 1 Schritt → direkt springen
+      // multiple jumps => no animation, direct setup
       pager.setup(at: index)
       layoutPages()
     }
@@ -551,18 +550,6 @@ extension WebPagerVC {
     return true
   }
   
-  /// primary right tap handler for right edge tap, is available, add scroll or zoom behaviour if needed
-  /// - Parameter closure: closure to call; return true if event handled and index not needed to change
-  public func onRightTap(closure: @escaping ()->(Bool)) {
-    onRightTapClosure = closure
-  }
-  /// primary left tap handler for right edge tap, is available, add scroll or zoom behaviour if needed
-  /// - Parameter closure: closure to call; return true if event handled and index not needed to change
-  public func onLeftTap(closure: @escaping ()->(Bool)) {
-    onLeftTapClosure = closure
-  }
-  
-  
   private var tapEnEdgeButtonWidth: CGFloat { 28.0 }
   
   fileprivate var newLeftTapEnEdgeButton: UIView {
@@ -574,14 +561,16 @@ extension WebPagerVC {
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
-      if self?.onLeftTapClosure?() == true { return }
+      if self?.handleLeftTap() == true { return }
       guard let idx = self?.index, idx > 0 else { return }
       self?.scrollTo(index: idx-1, animated: true)
-//      guard UIAccessibility.isVoiceOverRunning else { return }
-//      let accesibilityTarget = idx > 1 ? self?.leftTapEnEdgeButton : self?.defaultAccessibilityView ?? self?.rightTapEnEdgeButton
-//      ///Read new accessibility label after delay to ensure new content is available @see onDisplay above
-//      ///on change to index 0 leftTapEnEdgeButton has no label, so chosse another target to prevent focus loss
-//      onMainAfter(0.6){[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)}
+      guard UIAccessibility.isVoiceOverRunning else { return }
+      let accesibilityTarget = idx > 1 ? self?.leftTapEnEdgeButton : self?.defaultAccessibilityView ?? self?.rightTapEnEdgeButton
+      ///Read new accessibility label after delay to ensure new content is available @see onDisplay above
+      ///on change to index 0 leftTapEnEdgeButton has no label, so chosse another target to prevent focus loss
+      onMainAfter(0.6){
+        UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)
+      }
     }
     return btn
   }
@@ -595,19 +584,21 @@ extension WebPagerVC {
     btn.backgroundColor = UIColor.gray.withAlphaComponent(0.15)
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
-      if self?.onRightTapClosure?() == true { return }
+      if self?.handleRightTap() == true { return }
       guard let self = self,
             self.index <= self.pager.urls.count - 1 else { return }
       self.scrollTo(index: self.index + 1, animated: true)
-//      guard UIAccessibility.isVoiceOverRunning else { return }
-//      let isLastAfterScroll = (idx + 1) >= self.collectionView.count - 1
-//      let accesibilityTarget
-//      = isLastAfterScroll
-//      ? (self.defaultAccessibilityView ?? self.leftTapEnEdgeButton)
-//      : self.rightTapEnEdgeButton
-//      /// Read new accessibility label after delay to ensure new content is available @see onDisplay above
-//      /// On change to last index rightTapEnEdgeButton has no label, so choose another target to prevent focus loss
-//      onMainAfter(0.6){[weak self] in UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)}
+      guard UIAccessibility.isVoiceOverRunning else { return }
+      let isLastAfterScroll = (index + 1) >= self.count - 1
+      let accesibilityTarget
+      = isLastAfterScroll
+      ? (self.defaultAccessibilityView ?? self.leftTapEnEdgeButton)
+      : self.rightTapEnEdgeButton
+      /// Read new accessibility label after delay to ensure new content is available @see onDisplay above
+      /// On change to last index rightTapEnEdgeButton has no label, so choose another target to prevent focus loss
+      onMainAfter(0.6){
+        UIAccessibility.post(notification: .layoutChanged, argument: accesibilityTarget)
+      }
     }
     return btn
   }
