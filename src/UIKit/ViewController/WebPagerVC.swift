@@ -1,6 +1,9 @@
 //
 //  WebPagerVC.swift
 //  NorthLib
+//  VC and View for paging through multiple WebViews, each showing a different local URLs
+//  try to get rid of iPad Resize Bugs and Crahes with UICollectionVC
+///  maybe use **UIPageViewController** in next itteration or **decouple webview from collection view cell...**
 //
 //  Created by Ringo Müller on 04.05.26.
 //
