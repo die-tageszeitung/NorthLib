@@ -312,7 +312,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     }
   }
   
-  private func update(container: UIView, with page: OptionalWebView?) {
+  private func update1(container: UIView, with page: OptionalWebView?) {
     guard let view = page?.mainView else {
       container.isHidden = true
       return
@@ -333,36 +333,62 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     }
   }
   
+  private func update(container: UIView, with page: OptionalWebView?) {
+    guard let view = page?.mainView else {
+      container.isHidden = true
+      return
+    }
+
+    container.isHidden = false
+
+    if view.superview !== container {
+      // ❗️NICHT async
+      container.subviews.forEach {
+        if let wv = $0 as? WebView { wv.release() }
+        $0.removeFromSuperview()
+      }
+
+      view.frame = container.bounds
+      container.addSubview(view)
+    } else {
+      view.frame = container.bounds
+    }
+  }
+  
   public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-      isInteracting = true
+    guard scrollView == self.scrollView else { return }
+    isInteracting = true
   }
   
   public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-      isInteracting = false
-      commitPaging()
-  }
-  
-  public func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-      isInteracting = false
-      commitPaging()
+    guard scrollView == self.scrollView else { return }
+    isInteracting = false
+    commitPaging()
 
   }
   
+  public func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+    guard scrollView == self.scrollView else { return }
+    isInteracting = false
+    commitPaging()
+    
+  }
+  
   public func scrollViewWillEndDragging(_ scrollView: UIScrollView,
-                                  withVelocity velocity: CGPoint,
-                                  targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-       let w = scrollView.bounds.width
-       let targetX = targetContentOffset.pointee.x
-       let centerX: CGFloat = (pager.prev != nil) ? w : 0
-       if targetX > centerX { pendingDirection = .forward }
-       else if targetX < centerX { pendingDirection = .backward }
-       else { pendingDirection = .none }
-   }
+                                        withVelocity velocity: CGPoint,
+                                        targetContentOffset: UnsafeMutablePointer<CGPoint>) {
+    let w = scrollView.bounds.width
+    let targetX = targetContentOffset.pointee.x
+    let centerX: CGFloat = (pager.prev != nil) ? w : 0
+    if targetX > centerX { pendingDirection = .forward }
+    else if targetX < centerX { pendingDirection = .backward }
+    else { pendingDirection = .none }
+  }
   
   private enum PageDirection {  case none, forward, backward  }
   private var pendingDirection: PageDirection = .none
   
-  private func commitPaging() {
+  private func commitPaging1() {
     switch pendingDirection {
       case .forward:
         if pager.currentIndex < pager.urls.count - 1 { pager.moveForward() }
@@ -374,29 +400,51 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     layoutPages()
   }
   
-  // MARK: - External Navigation
-  public func scrollTo(index: Int, animated: Bool = false) {
-      guard index >= 0, index < pager.urls.count else { return }
-      let diff = index - pager.currentIndex
-      // 👉 Nur EIN Schritt → animieren
-      if animated && abs(diff) == 1 {
-          pendingDirection = diff > 0 ? .forward : .backward
-        let w = scrollView.bounds.width
-        let currentX = scrollView.contentOffset.x
-        let targetX: CGFloat = diff > 0
-            ? currentX + w   // nach rechts → next
-            : currentX - w   // nach links → prev
-          scrollView.setContentOffset(
-              CGPoint(x: targetX, y: 0),
-              animated: true
-          )
-      } else {
-          // 👉 Mehr als 1 Schritt → direkt springen
-          pager.setup(at: index)
-          layoutPages()
-      }
+  private func commitPaging() {
+    let oldIndex = pager.currentIndex
+
+    switch pendingDirection {
+      case .forward:
+        if pager.currentIndex < pager.urls.count - 1 { pager.moveForward() }
+      case .backward:
+        if pager.currentIndex > 0 { pager.moveBackward() }
+      case .none:
+        break
+    }
+
+    pendingDirection = .none
+
+    // 👉 Nur wenn sich wirklich was geändert hat
+    if pager.currentIndex != oldIndex {
+      layoutPages()
+    }
   }
   
+  // MARK: - External Navigation
+  public func scrollTo(index: Int, animated: Bool = false) {
+    guard index >= 0, index < pager.urls.count else { return }
+    let diff = index - pager.currentIndex
+    // 👉 Nur EIN Schritt → animieren
+    if animated && abs(diff) == 1 {
+      pendingDirection = diff > 0 ? .forward : .backward
+      let w = scrollView.bounds.width
+      let currentX = scrollView.contentOffset.x
+      let targetX: CGFloat = diff > 0
+      ? currentX + w   // nach rechts → next
+      : currentX - w   // nach links → prev
+      scrollView.setContentOffset(
+        CGPoint(x: targetX, y: 0),
+        animated: true
+      )
+    } else {
+      // 👉 Mehr als 1 Schritt → direkt springen
+      pager.setup(at: index)
+      layoutPages()
+    }
+  }
+}
+  
+extension WebPagerVC {
   // MARK: - WebView Setup Hook
   private func initWebView(oView: OptionalWebView) {
     let bottomInset = 52 + UIWindow.bottomInset
