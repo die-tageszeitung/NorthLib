@@ -324,9 +324,24 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   
   open override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    if oldSize == view.bounds.size { return }///important to avoid loop
-    oldSize = view.bounds.size
+    let newSize = view.bounds.size
+    guard oldSize != newSize else { return }
+    let oldWidth = oldSize.width
+    oldSize = newSize
+    // remember relative offset to prevent show neighbor page while resize/rotation
+    let relativeOffset: CGFloat
+    if oldWidth > 0 {
+      relativeOffset = scrollView.contentOffset.x / oldWidth
+    } else {
+      relativeOffset = pager.prev != nil ? 1 : 0
+    }
     layoutPages(resetOffset: false)
+    // set new offset
+    let newOffsetX = relativeOffset * newSize.width
+    scrollView.setContentOffset(
+      CGPoint(x: round(newOffsetX), y: 0),
+      animated: false
+    )
   }
   
   private func layoutPages(resetOffset: Bool = true) {
