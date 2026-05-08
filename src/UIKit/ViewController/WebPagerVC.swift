@@ -101,6 +101,7 @@ public final class WebViewPager: DoesLog {
     if let bridge = self.bridge {
       owv.webView?.addBridge(bridge)
       owv.webView?.scrollView.indicatorStyle = self.indicatorStyle
+      owv.webView?.scrollView.contentInsetAdjustmentBehavior = .never
     }
     return owv
   }
@@ -233,15 +234,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   }
   
   open func reloadAllWebViews(){
-    let bottomInset = 52 + UIWindow.bottomInset
-    pager.webviews.forEach{(val) in
-      if let wv = val.webView {
-        wv.reload()
-        wv.scrollView.indicatorStyle = indicatorStyle
-        wv.scrollView.scrollIndicatorInsets
-        = UIEdgeInsets(top: 64, left: 0, bottom: bottomInset , right: 0)
-      }
-    }
+    pager.webviews.forEach{ $0.webView?.reload() }
   }
   
   public func gotoIndex(index: Int) {
@@ -298,11 +291,12 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     scrollView.isPagingEnabled = true
     scrollView.bounces = true
     scrollView.delegate = self
+    scrollView.contentInsetAdjustmentBehavior = .never
     scrollView.isDirectionalLockEnabled = true
     scrollView.showsVerticalScrollIndicator = false
     scrollView.showsHorizontalScrollIndicator = false
     view.addSubview(scrollView)
-    pin(scrollView.top, to: view.topGuide())
+    pin(scrollView.top, to: view.topGuide())//top for Screen, TopGuide for SystemBar Bottom (+ ca 30)
     pin(scrollView.bottom, to: view.bottom)
     pin(scrollView.left, to: view.left)
     pin(scrollView.right, to: view.right)
@@ -321,23 +315,28 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
       scrollView.addSubview($0)
     }
   }
-  
+   
   open override func viewDidLayoutSubviews() {
     super.viewDidLayoutSubviews()
-    let newSize = view.bounds.size
+
+    let newSize = scrollView.bounds.size
     guard oldSize != newSize else { return }
+
     let oldWidth = oldSize.width
     oldSize = newSize
-    // remember relative offset to prevent show neighbor page while resize/rotation
+
     let relativeOffset: CGFloat
+
     if oldWidth > 0 {
       relativeOffset = scrollView.contentOffset.x / oldWidth
     } else {
       relativeOffset = pager.prev != nil ? 1 : 0
     }
+
     layoutPages(resetOffset: false)
-    // set new offset
+
     let newOffsetX = relativeOffset * newSize.width
+
     scrollView.setContentOffset(
       CGPoint(x: round(newOffsetX), y: 0),
       animated: false
@@ -348,26 +347,22 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     guard !isInteracting else { return } ///important!
     let w = oldSize.width
     let h = oldSize.height
-    guard w > 0 else { return }
     
+    guard w > 0 else { return }
     var containers: [UIView] = []
     
-    if pager.prev != nil {
-      containers.append(prevContainer)
-    }
-    
+    if pager.prev != nil { containers.append(prevContainer)  }
     containers.append(currentContainer)
-    
-    if pager.next != nil {
-      containers.append(nextContainer)
-    }
+    if pager.next != nil { containers.append(nextContainer)  }
     
     // set frames for containers
     for (i, container) in containers.enumerated() {
       container.frame = CGRect(x: CGFloat(i) * w, y: 0, width: w, height: h)
     }
     
-    scrollView.contentSize = CGSize(width: CGFloat(containers.count) * w, height: h)
+    scrollView.contentSize
+    = CGSize(width: CGFloat(containers.count) * w, height: h)
+    scrollView.contentInset = .zero
     
     update(container: prevContainer, with: pager.prev)
     update(container: currentContainer, with: pager.current)
@@ -376,27 +371,6 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     if resetOffset {
       let targetX: CGFloat = (pager.prev != nil) ? w : 0
       scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: false)
-    }
-  }
-  
-  private func update1(container: UIView, with page: OptionalWebView?) {
-    guard let view = page?.mainView else {
-      container.isHidden = true
-      return
-    }
-    
-    container.isHidden = false
-    if view.superview !== container {
-      DispatchQueue.main.async {
-        container.subviews.forEach {
-          if let wv = $0 as? WebView { wv.release() }
-          $0.removeFromSuperview()
-        }
-        view.frame = container.bounds
-        container.addSubview(view)
-      }
-    } else {
-      view.frame = container.bounds
     }
   }
   
@@ -409,12 +383,10 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     container.isHidden = false
 
     if view.superview !== container {
-      // ❗️NICHT async
       container.subviews.forEach {
         if let wv = $0 as? WebView { wv.release() }
         $0.removeFromSuperview()
       }
-
       view.frame = container.bounds
       container.addSubview(view)
     } else {
@@ -431,14 +403,12 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     guard scrollView == self.scrollView else { return }
     isInteracting = false
     commitPaging()
-
   }
   
   public func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
     guard scrollView == self.scrollView else { return }
     isInteracting = false
     commitPaging()
-    
   }
   
   public func scrollViewWillEndDragging(_ scrollView: UIScrollView,
@@ -512,13 +482,17 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
 }
   
 extension WebPagerVC {
+  
   // MARK: - WebView Setup Hook
   private func initWebView(oView: OptionalWebView) {
-    let bottomInset = 52 + UIWindow.bottomInset
-    oView.webView?.scrollView.scrollIndicatorInsets =
-    UIEdgeInsets(top: 58, left: 0, bottom: bottomInset, right: 0)
-    
     guard let webView = oView.webView else { return }
+    
+    webView.scrollView .contentInsetAdjustmentBehavior = .never
+    
+    let bottomInset = 52 + UIWindow.bottomInset
+    webView.scrollView.scrollIndicatorInsets
+    = UIEdgeInsets(top: 58, left: 0, bottom: bottomInset, right: 0)
+
     let url = webView.originalUrl?.lastPathComponent ?? "[undefined URL]"
     webView.whenLoadError { [weak self] err in
       self?.error("WebView Load Error on \"\(url)\":\n  \(err.description)")
@@ -609,6 +583,7 @@ extension WebPagerVC {
   
   @objc open func handleRightTap() -> Bool{
     if UIAccessibility.isVoiceOverRunning { return false }
+    /// **RECALC Required?**  maybe after rotation/resize addtionalBarHeight is not updated?
     guard let sv = self.currentWebView?.scrollView,
           sv.contentOffset.y + 2 + sv.frame.size.height < sv.contentSize.height
     else { return false }
