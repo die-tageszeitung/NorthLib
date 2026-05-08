@@ -36,6 +36,10 @@ public final class WebViewPager: DoesLog {
     [prev, current, next].compactMap { $0 }
   }
   
+  public var currentWebviews: [WebView] {
+    [prev, current, next].compactMap { $0?.webView }
+  }
+  
   /// The bridge (if any) to use for JS interaction
   public var bridge: JSBridgeObject?
   
@@ -107,7 +111,7 @@ public final class WebViewPager: DoesLog {
   }
   
   private func notifyDisplay() {
-    for cl in onDisplayClosures.values { cl(currentIndex, nil) }
+    for cl in onDisplayClosures.values { cl(currentIndex, current) }
   }
   
   func setup(at index: Int) {
