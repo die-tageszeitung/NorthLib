@@ -36,6 +36,16 @@ public final class WebViewPager: DoesLog {
     [prev, current, next].compactMap { $0 }
   }
   
+  public func releaseWebviews(){
+    webviews.forEach { $0.webView?.release() }
+    prev?.webView?.removeFromSuperview()
+    current?.webView?.removeFromSuperview()
+    next?.webView?.removeFromSuperview()
+    prev = nil
+    current = nil
+    next = nil
+  }
+  
   public var currentWebviews: [WebView] {
     [prev, current, next].compactMap { $0?.webView }
   }
@@ -287,6 +297,15 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   open override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
     updateTapArea()
+  }
+  
+  //overwriteable
+  open func releaseOnDisappear(){}
+  
+  // MARK: - Life Cycle
+  open override func didMove(toParent parent: UIViewController?) {
+    super.didMove(toParent: parent)
+    if parent == nil { releaseOnDisappear() }
   }
   
   // MARK: - Setup
