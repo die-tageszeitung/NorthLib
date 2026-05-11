@@ -387,27 +387,34 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     = CGSize(width: CGFloat(containers.count) * w, height: h)
     scrollView.contentInset = .zero
     
-    update(container: prevContainer, with: pager.prev)
-    update(container: currentContainer, with: pager.current)
-    update(container: nextContainer, with: pager.next)
+    var removedWebviews: [WebView] = []
+    
+    removedWebviews.append(contentsOf: update(container: prevContainer, with: pager.prev))
+    removedWebviews.append(contentsOf: update(container: currentContainer, with: pager.current))
+    removedWebviews.append(contentsOf: update(container: nextContainer, with: pager.next))
     
     if resetOffset {
       let targetX: CGFloat = (pager.prev != nil) ? w : 0
       scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: false)
     }
+    for wv in removedWebviews { if wv.superview == nil {wv.release()} }
   }
   
-  private func update(container: UIView, with page: OptionalWebView?) {
+  private func update(container: UIView, with page: OptionalWebView?) -> [WebView] {
     guard let view = page?.mainView else {
       container.isHidden = true
-      return
+      return []
     }
 
+    var removedWebviews: [WebView] = []
+    
     container.isHidden = false
 
     if view.superview !== container {
       container.subviews.forEach {
-        if let wv = $0 as? WebView { wv.release() }
+        if let wv = $0 as? WebView {
+          removedWebviews.append(wv)
+        }
         $0.removeFromSuperview()
       }
       view.frame = container.bounds
@@ -415,6 +422,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     } else {
       view.frame = container.bounds
     }
+    return removedWebviews
   }
   
   public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
@@ -517,21 +525,27 @@ extension WebPagerVC {
     = UIEdgeInsets(top: 58, left: 0, bottom: bottomInset, right: 0)
 
     let url = webView.originalUrl?.lastPathComponent ?? "[undefined URL]"
+    
     webView.whenLoadError { [weak self] err in
       self?.error("WebView Load Error on \"\(url)\":\n  \(err.description)")
     }
+    
     webView.whenLinkPressed { [weak self] arg in
       self?.$whenLinkPressed.notify(sender: self, content: arg)
     }
+    
     webView.whenLoaded { [weak self] wv in
       self?.$whenLoaded.notify(sender: self, content: wv)
     }
+    
     webView.scrollDelegate.whenScrolled { [weak self] ratio in
       self?.$whenScrolled.notify(sender: self, content: ratio)
     }
+    
     webView.scrollDelegate.atEndOfContent { [weak self] isAtEnd in
       self?.$atEndOfContent.notify(sender: self, content: isAtEnd)
     }
+    
     webView.scrollDelegate.scrollViewWillBeginDragging { [weak self] ratio in
       self?.$scrollViewWillBeginDragging.notify(sender: self, content: ratio)
     }
