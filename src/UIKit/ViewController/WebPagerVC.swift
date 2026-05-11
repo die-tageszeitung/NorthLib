@@ -267,6 +267,14 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     }
   }
   
+  public func gotoUrl(path: String, file: String) {
+    gotoUrl(path + "/" + file)
+  }
+  
+  public func gotoUrl(_ url: String) {
+    let url = URL(fileURLWithPath: url)
+    gotoUrl(url: url)
+  }
   
   public func gotoUrl(url: URL) {
     var idx = 0
