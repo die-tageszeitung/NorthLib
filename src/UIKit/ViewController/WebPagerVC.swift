@@ -27,6 +27,7 @@ public final class WebViewPager: DoesLog {
     return key
   }
   
+  public var currentActive: UIView? { current?.activeView }
   
   private(set) var prev: OptionalWebView?
   private(set) var current: OptionalWebView?
@@ -419,6 +420,9 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
       scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: false)
     }
     for wv in removedWebviews { if wv.superview == nil {wv.release()} }
+    onMainAfter() {[weak self] in
+      self?.view.accessibilityElements = self?.accessibilityViews
+    }
   }
   
   private func update(container: UIView, with page: OptionalWebView?) -> [WebView] {
@@ -476,19 +480,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   
   private enum PageDirection {  case none, forward, backward  }
   private var pendingDirection: PageDirection = .none
-  
-  private func commitPaging1() {
-    switch pendingDirection {
-      case .forward:
-        if pager.currentIndex < pager.urls.count - 1 { pager.moveForward() }
-      case .backward:
-        if pager.currentIndex > 0 { pager.moveBackward() }
-      case .none:  break
-    }
-    pendingDirection = .none
-    layoutPages()
-  }
-  
+    
   private func commitPaging() {
     let oldIndex = pager.currentIndex
 
@@ -596,6 +588,24 @@ extension WebPagerVC {
   }
   
 }
+
+extension WebPagerVC: AccessibilityTargetsProvider {
+  @objc open var accessibilityViews: [UIView] {
+    var elements: [UIView] = []
+    elements.appendIfPresent(defaultAccessibilityView)
+    elements.append(leftTapEnEdgeButton)
+    elements.append(rightTapEnEdgeButton)
+    elements.appendIfPresent(pager.current?.activeView)
+    /** Alternative to Buttons add the nearby cells
+     //    let visibleCells = collectionView.visibleCells
+     //    let visibleIndexPaths = visibleCells.compactMap { collectionView.indexPath(for: $0) }
+     //    let sortedIndexPaths = visibleIndexPaths.sorted()
+     //    for ip in sortedIndexPaths { elements.appendIfPresent(collectionView.cellForItem(at: ip))    }
+     */
+    return elements
+  }
+}
+
 
 /// Side Tapping
 extension WebPagerVC {
