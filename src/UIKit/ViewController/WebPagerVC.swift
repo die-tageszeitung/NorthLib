@@ -174,6 +174,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   
   // MARK: - Callback/Closure Storage
   /// The closures to call when content has been loaded
+  #warning("may fires more often than in WebCollectionVC")
   @Callback<WebView>
   public var whenLoaded: Callback<WebView>.Store
   
@@ -247,6 +248,11 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     return pager.onDisplay(closure: closure)
   }
   
+  /// removes a closure to call when a cell is newly displayed  from closures by given key
+  public func removeOnDisplay(forKey: String) {
+    return pager.onDisplayClosures[forKey] = nil
+  }
+  
   open func reloadAllWebViews(){
     pager.webviews.forEach{ $0.webView?.reload() }
   }
@@ -299,8 +305,23 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     updateTapArea()
   }
   
+  private var appearClosure: (()->())?
+  
+  /// Define closure to call when the view has appeared (and thus content is visible)
+  /// compared to prev Implementation with WebCollectionVC whenLoaded my fires multiple times more!
+  public func onAppear(closure: @escaping ()->()) {
+    appearClosure = closure
+  }
+  
+  open override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    appearClosure?()
+  }
+  
   //overwriteable
-  open func releaseOnDisappear(){}
+  open func releaseOnDisappear(){
+    appearClosure = nil
+  }
   
   // MARK: - Life Cycle
   open override func didMove(toParent parent: UIViewController?) {
