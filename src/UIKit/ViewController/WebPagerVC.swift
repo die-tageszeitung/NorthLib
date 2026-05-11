@@ -103,7 +103,6 @@ public final class WebViewPager: DoesLog {
     if index < currentIndex {
       currentIndex -= 1
     } else if index == currentIndex {
-      // 👉 aktuelles Element gelöscht
       currentIndex = min(currentIndex, urls.count - 1)
     }
     rebuildAroundCurrent()

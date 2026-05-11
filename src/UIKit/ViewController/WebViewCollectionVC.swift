@@ -99,6 +99,8 @@ public struct FileUrl: WebViewUrl {
 }
 
 /// A WebViewCollectionVC manages a hoizontal collection of web views
+/// looses index when resizing on iPad, Problem is probably wrong index usage (set/get) and nested viewprovider
+/// in case of future use move the viewprovider to pagecollectionview or vc
 open class WebViewCollectionVC: PageCollectionVC {
     
   /// The list of URLs to display in WebViews
@@ -177,10 +179,6 @@ open class WebViewCollectionVC: PageCollectionVC {
         val.webView?.suppressLinkPressedNotification
         = suppressLinkPressedNotification
       }
-//      optionalWebViews.forEach{
-//        $0.webView?.suppressLinkPressedNotification
-//        = suppressLinkPressedNotification
-//      }
     }
   }
   
@@ -189,10 +187,6 @@ open class WebViewCollectionVC: PageCollectionVC {
       log("=> NOT gotoUrl: suppressLinkPressedNotification is active, ignoring gotoUrl: \(url.lastPathComponent)")
       return
     }
-//    guard currentWebView?.suppressLinkPressedNotification == false else {
-//      log("=> NOT gotoUrl: suppressLinkPressedNotification is active, ignoring gotoUrl: \(url.lastPathComponent)")
-//      return
-//    }
     if urls.count == 0 { self.initialUrl = url; return }
     var idx = 0
     debug("searching for: \(url.lastPathComponent)")
@@ -216,7 +210,6 @@ open class WebViewCollectionVC: PageCollectionVC {
     gotoUrl(path + "/" + file)
   }
   
-//  var optionalWebViews:[OptionalWebView] = []
   
   var cache: [Int: OptionalWebView] = [:]
   
@@ -255,12 +248,9 @@ open class WebViewCollectionVC: PageCollectionVC {
     ///WARNING IGNORE oview in viewProvider completely and use only index to manage WebViews
     viewProvider { [weak self] (index, _) in
         guard let self = self else { return UIView() }
-        // ✅ 1. existierende WebView für diesen Index?
         if let cached = self.cache[index] {
             return cached
         }
-        // ❌ IGNORIERE oview komplett
-        // (das ist der wichtigste Fix)
         let owv = OptionalWebView(url: self.urls[index], baseDir: self.baseDir)
 //        self.initWebView(oView: owv)
         let bottomInset = 52 + UIWindow.bottomInset
@@ -274,31 +264,9 @@ open class WebViewCollectionVC: PageCollectionVC {
             owv.webView?.scrollView.indicatorStyle = self.indicatorStyle
         }
 
-        // ✅ speichern
         self.cache[index] = owv
         return owv
     }
-//    viewProvider { [weak self] (index, oview) in
-//      guard let self = self else { return UIView() }
-//      if let ov = oview as? OptionalWebView {
-//        ov.webView?.scrollView.indicatorStyle = self.indicatorStyle
-//        ov.url = self.urls[index]
-//        return ov
-//      }
-//      else {
-//        let owv = OptionalWebView(url: self.urls[index], baseDir: self.baseDir)
-////        self.debug("viewProvider: new -> \(owv.url.url.lastPathComponent)")
-//        self.initWebView(oView: owv)
-//        let bottomInset = 52 + UIWindow.bottomInset
-//        owv.webView?.scrollView.scrollIndicatorInsets = UIEdgeInsets(top: 58, left: 0, bottom: bottomInset, right: 0)
-//        self.optionalWebViews.append(owv)
-//        if let bridge = self.bridge {
-//          owv.webView?.addBridge(bridge)
-//          owv.webView?.scrollView.indicatorStyle = self.indicatorStyle
-//        }
-//        return owv
-//      }
-//    }
   }
   
   func pruneCache(around index: Int) {
