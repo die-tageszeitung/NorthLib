@@ -237,7 +237,9 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// Max. number of ongoing errors
   private let maxErrorCount = 5
   
-  
+  /// WARNING Maybe this did not work as expected
+  /// in case of release while load and webview was not added to parent Cell (in optionalView) release was not called,
+  /// and on available whebview was there but not added to ui => memory Leak; this may not happen with WebPager
   public func release(){
     self.whenAvailable { _ in }
     if #available(iOS 14.0, *) {
