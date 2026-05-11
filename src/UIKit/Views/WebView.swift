@@ -219,9 +219,7 @@ extension WKNavigationAction: ToString {
 
 open class WebView: WKWebView, WKScriptMessageHandler,
                     WKNavigationDelegate, WKUIDelegate {
-  
-  var isActiveOne = false
-  
+
   /// JS NativeBridge objects
   public var bridgeObjects: [String:JSBridgeObject] = [:]
   
@@ -264,20 +262,12 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// on rotation on some iPhones sometimes whenLinkPressed is called with another random content url,
   /// prevent this on tom open in section
   public var suppressLinkPressedNotification: Bool = false
-  //  {
-  //    didSet {
-  //      guard oldValue != suppressLinkPressedNotification,
-  //            suppressLinkPressedNotification == false else { return }
-  //      log("=> SLPN: \(suppressLinkPressedNotification) changed, reload: \(self.url?.absoluteString.lastPathComponent ?? "-")")
-  //      reload()
-  //    }
-  //  }
   
   /// The closures to call when a load error has been detected
   /// The content passed will be err: Error
   @Callback<Error>
   public var whenLoadError: Callback<Error>.Store
-  
+      
   /// Set to true when Bridge JS has been loaded
   private var isBridgeLoaded = false
   
@@ -326,7 +316,7 @@ open class WebView: WKWebView, WKScriptMessageHandler,
       [weak self] (retval, error) in
       if let err = error {
         self?.error("JavaScript error: " + err.localizedDescription +
-                    "\n  in: '\(expr)'")
+          "\n  in: '\(expr)'")
       }
       else {
         if let callback = closure {
@@ -366,7 +356,6 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   
   @discardableResult
   public func load(url: URL, whenFinished: (()->())? = nil) -> WKNavigation? {
-    self.log("=> webview.load url: \(url)")
     if let closure = whenFinished { whenLoaded { _ in closure() } }
     if isLoading { stopLoading() }
     self.originalUrl = url
@@ -385,7 +374,6 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   
   @discardableResult
   public func load(_ string: String, whenFinished: (()->())? = nil) -> WKNavigation? {
-    self.log("=> webview.load string: \(string)")
     if let url = URL(string: string) {
       return load(url: url, whenFinished: whenFinished)
     }
@@ -456,236 +444,6 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     }
   }
   
-  // MARK: - WKNavigationDelegate protocol
-  public func webView2(_ webView: WKWebView,
-                       decidePolicyFor nav: WKNavigationAction,
-                       decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-    guard let wv = webView as? WebView else {
-      decisionHandler(.allow)
-      return
-    }
-    // 👉 Während Resize NIEMALS eingreifen
-    if wv.suppressLinkPressedNotification {
-      decisionHandler(.allow)
-      return
-    }
-    // 👉 Nur echte User-Klicks behandeln
-    if nav.navigationType == .linkActivated,
-       let url = nav.request.url {
-      let content = (wv.originalUrl, url)
-      if suppressLinkPressedNotification == false {
-        $whenLinkPressed.notify(sender: self, content: content)
-      }
-      decisionHandler(.cancel)
-      return
-    }
-    // 👉 Alles andere (reload, other, backForward etc.) erlauben
-    decisionHandler(.allow)
-  }
-  
-  public func webView8(_ webView: WKWebView,
-                       decidePolicyFor nav: WKNavigationAction,
-                       decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-    
-    guard let wv = webView as? WebView else {
-      decisionHandler(.allow)
-      return
-    }
-    guard let toURL = nav.request.url else {
-      decisionHandler(.allow)
-      return
-    }
-    let fromURL = wv.originalUrl
-    // 👉 während Resize/Rotation: NICHT eingreifen
-    if wv.suppressLinkPressedNotification {
-      decisionHandler(.allow)
-      return
-    }
-    // 👉 initial load / gleiche URL → IMMER erlauben
-    if let from = fromURL,
-       from.standardizedFileURL == toURL.standardizedFileURL {
-      decisionHandler(.allow)
-      return
-    }
-    // 👉 about:blank etc.
-    if toURL.absoluteString == "about:blank" {
-      decisionHandler(.allow)
-      return
-    }
-    let scheme = toURL.scheme?.lowercased()
-    let content = (fromURL, toURL)
-    // =========================
-    // 1. EXTERNE LINKS
-    // =========================
-    if scheme == "http" || scheme == "https" {
-      if suppressLinkPressedNotification == false {
-        $whenLinkPressed.notify(sender: self, content: content)
-      }
-      decisionHandler(.cancel)
-      return
-    }
-    // =========================
-    // 2. INTERNE LINKS (file://)
-    // =========================
-    if toURL.isFileURL {
-      if suppressLinkPressedNotification == false {
-        $whenLinkPressed.notify(sender: self, content: content)
-      }
-      decisionHandler(.cancel)
-      return
-    }
-    // =========================
-    // 3. fallback
-    // =========================
-    decisionHandler(.allow)
-  }
-  
-  public func webView6(_ webView: WKWebView,
-                       decidePolicyFor nav: WKNavigationAction,
-                       decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-    
-    guard let wv = webView as? WebView else {
-      decisionHandler(.allow)
-      return
-    }
-    
-    // 👉 Resize / Rotation: nicht eingreifen
-    if wv.suppressLinkPressedNotification {
-      decisionHandler(.allow)
-      return
-    }
-    
-    guard let url = nav.request.url else {
-      decisionHandler(.allow)
-      return
-    }
-    
-    let scheme = url.scheme?.lowercased()
-    
-    // =========================
-    // 1. EXTERNE LINKS (immer!)
-    // =========================
-    if scheme == "http" || scheme == "https" {
-      
-      // 👉 wichtig: NICHT navigationType prüfen
-      DispatchQueue.main.async {
-        UIApplication.shared.open(url)
-      }
-      
-      decisionHandler(.cancel)
-      return
-    }
-    
-    // =========================
-    // 2. INTERNE LINKS
-    // =========================
-    if url.isFileURL {
-      
-      // 👉 nur bei echten Klicks reagieren
-      if nav.navigationType == .linkActivated || nav.navigationType == .other {
-        
-        let content = (wv.originalUrl, url)
-        $whenLinkPressed.notify(sender: self, content: content)
-        
-        decisionHandler(.cancel)
-        return
-      }
-    }
-    
-    // =========================
-    // 3. alles andere
-    // =========================
-    decisionHandler(.allow)
-  }
-  
-  
-  
-  public func webView4(_ webView: WKWebView,
-                       decidePolicyFor nav: WKNavigationAction,
-                       decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-    guard let wv = webView as? WebView else {
-      decisionHandler(.allow)
-      return
-    }
-    guard nav.navigationType == .linkActivated,
-          let url = nav.request.url else {
-      decisionHandler(.allow)
-      return
-    }
-    
-    // 👉 während Resize nichts tun
-    if suppressLinkPressedNotification {
-      decisionHandler(.allow)
-      return
-    }
-    
-    // 👉 interne file:// Links
-    if url.isFileURL {
-      let content = (wv.originalUrl, url)
-      $whenLinkPressed.notify(sender: self, content: content)
-      decisionHandler(.cancel)
-      return
-    }
-    
-    // 👉 externe Links (HTTP/HTTPS)
-    if let scheme = url.scheme?.lowercased(),
-       scheme == "http" || scheme == "https" {
-      DispatchQueue.main.async {
-        UIApplication.shared.open(url)
-      }
-      decisionHandler(.cancel)
-      return
-    }
-    // 👉 fallback
-    decisionHandler(.allow)
-  }
-  
-  public func webView10(_ webView: WKWebView, decidePolicyFor nav: WKNavigationAction,
-                      decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-    ///debug(nav2a(webView: webView, nav: nav))
-    ///
-    guard let wv = webView as? WebView else {
-      decisionHandler(.allow)
-      return
-    }
-    
-    let from = wv.originalUrl?.absoluteString
-    let to = nav.request.description
-    
-    if from != to, nav.navigationType == .reload {
-      decisionHandler(.cancel)
-      return
-    }
-    
-    log("==> Webview...from: \(from?.lastPathComponent ?? "-") to: \(to.lastPathComponent) nav: \(nav.navigationType) selfurl: \(self.originalUrl?.absoluteString.lastPathComponent ?? "-") isSelfHandling: \(wv == self) \n    supress:::\(suppressLinkPressedNotification) selfhash: \(self.hash)")
-    if from != to, to != "about:blank" {
-      let content = (wv.originalUrl, URL(string: to))
-      ///debug("from: \(from ?? "-") to: \(to) nav: \(nav.navigationType)")
-      /*
-       if nav.navigationType == .reload,
-       (from ?? "").hasPrefix("file://"),
-       to.hasPrefix("file://") {
-       log("=> Webview.skip navigation to: \(to)")
-       decisionHandler(.cancel)
-       }
-       else
-       */
-      if $whenLinkPressed.count > 0 {
-        log("=> Webview...navigate")
-        log("=> WebView::NAV from: \(from ?? "-") to: \(to) nav: \(nav.navigationType)")
-        if suppressLinkPressedNotification == false {
-          $whenLinkPressed.notify(sender: self, content: content)
-        }
-        decisionHandler(.cancel)
-      }
-      else {
-        decisionHandler(.allow)
-      }
-    } else {
-      decisionHandler(.allow)
-    }
-  }
-  
   public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
     self.errorCount = 0
     isBridgeLoaded = false
@@ -721,7 +479,7 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     if let failUrl = (err as? URLError)?.failingURL,
        let loadUrl = url,
        loadUrl != failUrl {
-      log("⚠️Warning recive error for: \(failUrl.lastPathComponent), but loading: \(loadUrl.lastPathComponent)")
+      log("Warning recive error for: \(failUrl), but loading: \(loadUrl)")
       return
     }
     
