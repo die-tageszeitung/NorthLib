@@ -33,9 +33,18 @@ class OptionalWebView: OptionalView, DoesLog {
     if url.isAvailable { webView?.load(url: url.url) }
   }
   
-  func release(){
-    self.webView?.release()
-    self.$whenAvailable.removeAll()
+  func release() {
+    webView?.stopLoading()
+    webView?.navigationDelegate = nil
+    webView?.uiDelegate = nil
+    webView?.scrollView.delegate = nil
+
+    webView?.removeFromSuperview()
+    webView?.release()
+
+    webView = nil
+
+    $whenAvailable.removeAll()
   }
   
   fileprivate func urlChanged() {
@@ -77,6 +86,7 @@ class OptionalWebView: OptionalView, DoesLog {
     webView.whenLoaded { [weak self] param in
       self?.log("=> WebColVc.OWV.createWebView.whenLoaded: \(param)")
       self?.$whenAvailable.notify(sender: self)
+      self?.$whenAvailable.removeAll()
     }
   }
 

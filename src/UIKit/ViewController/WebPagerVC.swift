@@ -77,9 +77,9 @@ public final class WebViewPager: DoesLog {
 
     let idx = currentIndex
 
-    current = make(index: idx)
-    prev = idx > 0 ? make(index: idx - 1) : nil
-    next = idx < urls.count - 1 ? make(index: idx + 1) : nil
+    replace(&current, with: make(index: idx))
+    replace(&prev, with: idx > 0 ? make(index: idx - 1) : nil)
+    replace(&next, with: idx < urls.count - 1 ? make(index: idx + 1) : nil)
 
     notifyDisplay()
   }
@@ -124,36 +124,44 @@ public final class WebViewPager: DoesLog {
     for cl in onDisplayClosures.values { cl(currentIndex, current) }
   }
   
+  private func replace(_ target: inout OptionalWebView?, with newValue: OptionalWebView?) {
+    if target !== newValue {
+      target?.release()
+    }
+    target = newValue
+  }
+  
   func setup(at index: Int) {
     currentIndex = index
     
-    current = make(index: index)
+    replace(&current, with: make(index: index))
     notifyDisplay()
-    prev = (index > 0) ? make(index: index - 1) : nil
-    next = (index < urls.count - 1) ? make(index: index + 1) : nil
+    replace(&prev, with: index > 0 ? make(index: index - 1) : nil)
+    replace(&next, with: index < urls.count - 1 ? make(index: index + 1) : nil)
   }
   
   func moveForward() {
     guard currentIndex < urls.count - 1 else { return }
-    
+    let oldPrev = prev
     prev = current
-    current = next
+    current = next ?? make(index: currentIndex + 1)
     currentIndex += 1
-    
     let newIndex = currentIndex + 1
     next = (newIndex < urls.count) ? make(index: newIndex) : nil
+    oldPrev?.release()
     notifyDisplay()
   }
   
   func moveBackward() {
     guard currentIndex > 0 else { return }
     
+    let oldNext = next
     next = current
-    current = prev
+    current = prev ?? make(index: currentIndex - 1)
     currentIndex -= 1
-    
     let newIndex = currentIndex - 1
     prev = (newIndex >= 0) ? make(index: newIndex) : nil
+    oldNext?.release()
     notifyDisplay()
   }
 }
@@ -416,56 +424,80 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     = CGSize(width: CGFloat(containers.count) * w, height: h)
     scrollView.contentInset = .zero
     
-    var removedWebviews: [WebView] = []
-    
-    removedWebviews.append(contentsOf: update(container: prevContainer, with: pager.prev))
-    removedWebviews.append(contentsOf: update(container: currentContainer, with: pager.current))
-    removedWebviews.append(contentsOf: update(container: nextContainer, with: pager.next))
+    update(container: prevContainer, with: pager.prev)
+    update(container: currentContainer, with: pager.current)
+    update(container: nextContainer, with: pager.next)
     
     if resetOffset {
       let targetX: CGFloat = (pager.prev != nil) ? w : 0
       scrollView.setContentOffset(CGPoint(x: targetX, y: 0), animated: false)
     }
-    for wv in removedWebviews { if wv.superview == nil {wv.release()} }
     onMainAfter() {[weak self] in
       self?.view.accessibilityElements = self?.accessibilityViews
     }
   }
   
-  private func add(view:UIView, to container: UIView) -> [WebView] {
-    guard view.superview !== container else { return [] }
-    var removedWebviews: [WebView] = []
+  private var containerTokens: [ObjectIdentifier:Int] = [:]
+  private var tokenCounter: Int = 0
+  
+  private func add(view:UIView, to container: UIView) {
+    guard view.superview !== container else { return }
     container.subviews.forEach {
-      if let wv = $0 as? WebView {
-        removedWebviews.append(wv)
-      }
+      if let wv = $0 as? WebView { wv.release() }
       $0.removeFromSuperview()
     }
     view.frame = container.bounds
     container.addSubview(view)
-    return removedWebviews
   }
   
-  private func update(container: UIView, with page: OptionalWebView?) -> [WebView] {
-    page?.whenAvailable { [weak self] in
-      if let wv = page?.mainView {
-        let removedWebviews = self?.add(view: wv, to: container) ?? []
-        for wv in removedWebviews { wv.release() }
+  private func update(container: UIView, with page: OptionalWebView?) {
+    guard let page else {
+      container.subviews.forEach {
+        $0.removeFromSuperview()
+      }
+      return
+    }
+    
+    tokenCounter += 1
+    let token = tokenCounter
+    containerTokens[ObjectIdentifier(container)] = token
+    func isStillValid() -> Bool {
+      containerTokens[ObjectIdentifier(container)] == token
+    }
+    if page.isAvailable == true, let view = page.mainView {
+      add(view: view, to: container)
+    }
+    else if let waiting = page.waitingView {
+      add(view: waiting, to: container)
+      page.whenAvailable { [weak self, weak container, weak page] in
+        guard let self, let container, let page, isStillValid(), page.isAvailable, let wv = page.mainView
+        else { return }
+        self.add(view: wv, to: container)
       }
     }
-    var removedWebviews: [WebView] = []
+    else {
+      container.subviews.forEach {
+        if let wv = $0 as? WebView { wv.release() }
+        $0.removeFromSuperview()
+      }
+    }
+  }
+  
+  private func updateOld(container: UIView, with page: OptionalWebView?) {
+    page?.whenAvailable { [weak self] in
+      if let wv = page?.mainView { self?.add(view: wv, to: container) }
+    }
     
     if page?.isAvailable == true, let view = page?.mainView {
-      removedWebviews.append(contentsOf: add(view: view, to: container))
+      add(view: view, to: container)
     }
     else if let view = page?.waitingView {
-      removedWebviews.append(contentsOf: add(view: view, to: container))
+      add(view: view, to: container)
     }
     else {
-      let spinner = UIActivityIndicatorView(style: .medium)
-      removedWebviews.append(contentsOf: add(view: spinner, to: container))
+      //try to ensure wrong view is shown seams not to work
+      add(view: UIView(), to: container)
     }
-    return removedWebviews
   }
   
   public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
