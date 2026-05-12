@@ -432,27 +432,38 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     }
   }
   
-  private func update(container: UIView, with page: OptionalWebView?) -> [WebView] {
-    guard let view = page?.mainView else {
-      container.isHidden = true
-      return []
+  private func add(view:UIView, to container: UIView) -> [WebView] {
+    guard view.superview !== container else { return [] }
+    var removedWebviews: [WebView] = []
+    container.subviews.forEach {
+      if let wv = $0 as? WebView {
+        removedWebviews.append(wv)
+      }
+      $0.removeFromSuperview()
     }
-
+    view.frame = container.bounds
+    container.addSubview(view)
+    return removedWebviews
+  }
+  
+  private func update(container: UIView, with page: OptionalWebView?) -> [WebView] {
+    page?.whenAvailable { [weak self] in
+      if let wv = page?.mainView {
+        let removedWebviews = self?.add(view: wv, to: container) ?? []
+        for wv in removedWebviews { wv.release() }
+      }
+    }
     var removedWebviews: [WebView] = []
     
-    container.isHidden = false
-
-    if view.superview !== container {
-      container.subviews.forEach {
-        if let wv = $0 as? WebView {
-          removedWebviews.append(wv)
-        }
-        $0.removeFromSuperview()
-      }
-      view.frame = container.bounds
-      container.addSubview(view)
-    } else {
-      view.frame = container.bounds
+    if page?.isAvailable == true, let view = page?.mainView {
+      removedWebviews.append(contentsOf: add(view: view, to: container))
+    }
+    else if let view = page?.waitingView {
+      removedWebviews.append(contentsOf: add(view: view, to: container))
+    }
+    else {
+      let spinner = UIActivityIndicatorView(style: .medium)
+      removedWebviews.append(contentsOf: add(view: spinner, to: container))
     }
     return removedWebviews
   }
@@ -594,6 +605,10 @@ extension WebPagerVC {
     layoutPages()
   }
   
+  public func updatePagesAfterInsertOrDelete() {
+    pager.setup(at: index)
+    layoutPages()
+  }
 }
 
 extension WebPagerVC: AccessibilityTargetsProvider {
