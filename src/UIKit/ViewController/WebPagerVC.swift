@@ -440,12 +440,10 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   private var containerTokens: [ObjectIdentifier:Int] = [:]
   private var tokenCounter: Int = 0
   
-  private func add(view:UIView, to container: UIView) {
+  private func add(view: UIView, to container: UIView) {
     guard view.superview !== container else { return }
-    container.subviews.forEach {
-      if let wv = $0 as? WebView { wv.release() }
-      $0.removeFromSuperview()
-    }
+    container.subviews.forEach { $0.removeFromSuperview() }
+    view.removeFromSuperview()
     view.frame = container.bounds
     container.addSubview(view)
   }
