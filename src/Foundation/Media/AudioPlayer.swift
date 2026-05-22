@@ -268,9 +268,13 @@ open class AudioPlayer: NSObject, DoesLog {
               self.error("Can't resize image from \(image.size) to \(s)")
             }
           }
-          return self.resizedImage ?? self.logoToAdd ?? UIImage()
+          return self.resizedImage ?? UIImage()
         }
       }
+      else {
+        info.removeValue(forKey: MPMediaItemPropertyArtwork)
+      }
+      
       #endif
       if let title = title {
         info[MPMediaItemPropertyTitle] = title
