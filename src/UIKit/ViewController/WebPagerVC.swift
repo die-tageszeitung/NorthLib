@@ -639,7 +639,9 @@ extension WebPagerVC {
   }
   
   public func updatePagesAfterInsertOrDelete() {
-    pager.setup(at: index)
+    guard count > 0 else { return }
+    let idx = index < count ? index : 0
+    pager.setup(at: idx)
     layoutPages()
   }
 }
