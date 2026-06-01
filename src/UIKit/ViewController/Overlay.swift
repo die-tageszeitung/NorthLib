@@ -188,11 +188,10 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       ct.delegate.addToOverlayContainer(overlayView)
     }
     
-    if let elms = (overlayVC as? AccessibilityTargetsProvider)?.accessibilityViews {
+    if let elms = (overlayVC as? AccessibilityTargetsProvider)?.accessibilityViews,
+        elms.count > 0 {
       activeVC.accessibilityElements = elms
     }
-    overlayVC.view.accessibilityViewIsModal = true
-    activeVC.view.isAccessibilityElement = false
   }
 
   
@@ -233,10 +232,13 @@ public class Overlay: NSObject, OverlaySpec, UIGestureRecognizerDelegate {
       }
       self?.shadeView?.alpha = self?.maxAlpha ?? 0.8
       targetSnapshot.alpha = 1.0
-    }) { (success) in
-      self.overlayVC.view.isHidden = false
+    }) {[weak self] (success) in
+      self?.overlayVC.view.isHidden = false
       targetSnapshot.removeFromSuperview()
-      UIAccessibility.post(notification: .layoutChanged,   argument: self.overlayVC.view)
+      ///notification did not work, focus stays in Background not for layoutChanged or screenChanged
+      ///UIAccessibility.post(notification: .layoutChanged,   argument: self?.overlayVC.view)
+      self?.overlayVC.view.accessibilityViewIsModal = true
+      self?.activeVC.view.isAccessibilityElement = false
       onMainAfter { completion?() }
     }
   }
