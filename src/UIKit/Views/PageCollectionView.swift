@@ -140,6 +140,12 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
     return nil
   }
   
+  func updateLayout() {
+    for case let cell as PageCell in visibleCells {
+      (cell.page as? ZoomedImageViewSpec)?.invalidateLayout()
+    }
+  }
+  
   /// Returns the view at a given index (if that view is visible)
   open func view(at idx: Int? = nil) -> UIView? {
     optionalView(at: idx)?.activeView
@@ -201,7 +207,12 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   }
   
   public private(set) var lastIndex: Int?
-  var resizing = false 
+  var resizing = false  {
+    didSet {
+      guard resizing == false else { return }
+      updateLayout()
+    }
+  }
   
   /// Call all onDisplay closures
   fileprivate func callOnDisplay(idx: Int, oview: OptionalView?){
