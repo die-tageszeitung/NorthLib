@@ -201,7 +201,7 @@ open class PageCollectionView: UICollectionView, UICollectionViewDelegate,
   }
   
   public private(set) var lastIndex: Int?
-  var resizing = false { didSet { self.alpha = resizing ? 0.5 : 1 }}
+  var resizing = false 
   
   /// Call all onDisplay closures
   fileprivate func callOnDisplay(idx: Int, oview: OptionalView?){
