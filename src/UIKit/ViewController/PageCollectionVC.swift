@@ -274,22 +274,11 @@ open class PageCollectionVC: UIViewController {
       )
     collectionView.resizing = false
     _lastIndexBeforeResize = nil
-    (self as? WebViewCollectionVC)?.suppressLinkPressedNotification = false
-//    (self as? WebViewCollectionVC)?.optionalWebViews.forEach({ wv in
-////      wv.suppressLinkPressedNotification = false
-//    })
   }
   
   open override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
     super.viewWillTransition(to: size, with: coordinator)
     collectionView.resizing = true
-    (self as? WebViewCollectionVC)?.suppressLinkPressedNotification = true
-//    (self as? WebViewCollectionVC)?.currentWebView?
-//      .suppressLinkPressedNotification = true
-//    (self as? WebViewCollectionVC)?.optionalWebViews?.forEach({ wv in
-//      wv.suppressLinkPressedNotification = true
-//    })
-//    let li = collectionView.currentIndex123
     let li = collectionView.currentIndex
     lastIndexBeforeResize = li
     self.log("=> vc.vwt: \(lastIndexBeforeResize ?? -1) <= \(li)")
