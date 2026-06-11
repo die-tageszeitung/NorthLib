@@ -108,8 +108,10 @@ public final class WebViewPager: DoesLog {
     rebuildAroundCurrent()
   }
   
-  private func make(index: Int) -> OptionalWebView {
-    let owv = OptionalWebView(url: urls[index], baseDir: baseDir)
+  private func make(index: Int) -> OptionalWebView? {
+    guard let url = urls.valueAt(index) else { return nil }
+    
+    let owv = OptionalWebView(url: url, baseDir: baseDir)
     initWebView?(owv)
     
     if let bridge = self.bridge {
