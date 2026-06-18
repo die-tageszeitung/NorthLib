@@ -194,7 +194,7 @@ public class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
   public var panoItemSize:CGSize = .zero
   public var collectionViewWidth:CGFloat = 0
   
-  init(pdfModel: PdfModel) {
+  public init(pdfModel: PdfModel) {
     self.pdfModel = pdfModel
     self.singlePageRatio = max(1.2, pdfModel.singlePageSize.height/pdfModel.singlePageSize.width)
     super.init()
