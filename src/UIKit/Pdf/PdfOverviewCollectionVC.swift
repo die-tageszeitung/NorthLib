@@ -25,11 +25,6 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
   public var cellLabelInActiveColor:UIColor = .gray
   public var activeIndex = 0
   public var cellLabelLinesCount = 0
-  public var titleCell:PdfOverviewCvcCell? { didSet {
-    oldValue?.listenLabel.onTapping { _ in }
-    oldValue?.listenIcon.onTapping { _ in }
-    onTitleCellChangeClosure?(titleCell)
-  }}
   private var onTitleCellChangeClosure: ((PdfOverviewCvcCell?) -> ())?
   public func onTitleCellChange(closure: ((PdfOverviewCvcCell?) -> ())?) {
     self.onTitleCellChangeClosure = closure
@@ -62,37 +57,6 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
     fatalError("init(coder:) has not been implemented")
   }
   
-  public override func viewDidLoad() {
-    super.viewDidLoad()
-    collectionView?.showsVerticalScrollIndicator = false
-    collectionView?.showsHorizontalScrollIndicator = false
-    // Register cell classes
-    collectionView?.register(PdfOverviewCvcCell.self, forCellWithReuseIdentifier: reuseIdentifier)
-    if let cv = self.collectionView, let cvsv = cv.superview {
-      pin(cv.bottom, to: cvsv.bottom)
-      pin(cv.top, to: cvsv.top)
-      pin(cv.left, to: cvsv.leftGuide())
-      pin(cv.right, to: cvsv.rightGuide())
-      topGradient.pinHeight(UIWindow.topInset)
-      cvsv.addSubview(topGradient)
-      /// Insets fix because gradient did not work as expectet
-      /// happen on Rotate in PDF e.g. on Notch iPhones either left gap or right, extend size to fix this
-      pin(topGradient.left, to: cvsv.leftGuide(), dist: -UIWindow.maxInset)
-      pin(topGradient.right, to: cvsv.rightGuide(), dist: UIWindow.maxInset)
-      pin(topGradient.top, to: cvsv.top)
-    }
-  }
-  
-  // MARK: UICollectionViewDataSource
-  public override func numberOfSections(in collectionView: UICollectionView) -> Int {
-    // #warning Incomplete implementation, return the number of sections
-    return 1
-  }
-  
-  public override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-    return pdfModel?.count ?? 0
-  }
-  
   public override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
     let _cell = collectionView.dequeueReusableCell(withReuseIdentifier: reuseIdentifier, for: indexPath)
     guard let cell = _cell as? PdfOverviewCvcCell,
@@ -107,8 +71,6 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
     guard let item = pdfModel.item(atIndex: indexPath.row) else {
       return cell
     }
-    
-    if indexPath.row == 0 { titleCell = cell }
     
     cell.label.textColor
     = indexPath.row == activeIndex
@@ -152,7 +114,6 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
     self.pdfModel = nil
     clickCallback = nil
     onTitleCellChangeClosure = nil
-    titleCell = nil
   }
 }
 
@@ -246,7 +207,7 @@ public class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
     for idx in 0..<pdfModel.count {
       let indexPath = IndexPath(item: idx, section: 0)
       let attributes = UICollectionViewLayoutAttributes(forCellWith: indexPath)
-      if let item = pdfModel.item(atIndex: idx) {
+      if let item = pdfModel.item(atIndex: idx + 1) {//index shift!
         switch (prevPageType, item.pageType) {
           case (.left, .right):
             attributes.frame = CGRect(origin: CGPoint(x: xRight, y: yOffset), size: singleItemSize)
@@ -260,7 +221,7 @@ public class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
             fallthrough
           default:
             if prevPageType == nil {//row 0 is left and pano, but no stretch!
-              attributes.frame = CGRect(origin: CGPoint(x: xLeft, y: yOffset), size: panoItemSize)
+              attributes.frame = CGRect(origin: CGPoint(x: xLeft, y: yOffset), size: singleItemSize)
             }
             else {
               yOffset += rowHeight

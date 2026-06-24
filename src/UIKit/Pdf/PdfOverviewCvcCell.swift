@@ -13,16 +13,12 @@ public class PdfOverviewCvcCell : UICollectionViewCell {
   public let imageView = UIImageView()
   public let label = UILabel()
   public let dateLabel = UILabel()
-  public let listenLabel = UILabel()
-  public let listenIcon = UIImageView()
   public var imageWidthConstraint: NSLayoutConstraint?
   
   public override func prepareForReuse() {
     self.imageView.image = nil
     self.label.text = nil
     self.dateLabel.text = nil
-    listenLabel.isHidden = true
-    listenIcon.isHidden = true
     imageWidthConstraint?.isActive = false
   }
   
@@ -49,31 +45,13 @@ public class PdfOverviewCvcCell : UICollectionViewCell {
     pin(label.leftGuide(), to: imageView.leftGuide())
     pin(label.rightGuide(), to: contentView.rightGuide())
     //Pin the Label outside of the cell simplifies everything!
-    pin(label.topGuide(), to: contentView.bottomGuide(), dist: 2.0)
+    pin(label.topGuide(), to: contentView.bottomGuide(), dist: 5.0)
     
     contentView.addSubview(dateLabel)
-    
-    listenLabel.textAlignment = .left
-    listenIcon.pinSize(CGSize(width: 24, height: 24))
-    
-    contentView.addSubview(listenIcon)
-    contentView.addSubview(listenLabel)
-    
-    pin(listenIcon.leftGuide(), to: imageView.rightGuide(), dist: PdfDisplayOptions.Overview.interItemSpacing)
-    pin(listenLabel.leftGuide(), to: listenIcon.rightGuide(), dist: PdfDisplayOptions.Overview.interItemSpacing)
-    pin(listenIcon.bottomGuide(), to: contentView.bottomGuide(), dist: 4.0)
-    pin(listenLabel.bottomGuide(), to: contentView.bottomGuide(), dist: 0.0)
     
     pin(dateLabel.leftGuide(), to: imageView.rightGuide(), dist: PdfDisplayOptions.Overview.interItemSpacing)
     pin(dateLabel.topGuide(), to: contentView.topGuide(), dist: -2.0)
     dateLabel.numberOfLines = 2
-    
-//    self.addBorder(.green, 0.5)
-//    self.contentView.addBorder(.yellow, 1.0)
-//    self.imageView.addBorder(.blue, 1.5)
-//    self.label.addBorder(.orange, 1.0)
-    listenLabel.isHidden = true
-    listenIcon.isHidden = true
   }
   
   required init?(coder: NSCoder) {
