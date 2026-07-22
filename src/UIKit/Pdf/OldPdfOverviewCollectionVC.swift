@@ -10,7 +10,7 @@ import UIKit
 
 /// Provides tile Overview either of various PDF Files or of various Pages of one PDF File
 //may work just with IMages and delegate handles what hapen on tap
-public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
+public class OldPdfOverviewCollectionVC : UICollectionViewController, CanRotate{
   // MARK: - Properties used in: UIScrollViewDelegate Extension
   // The closure to call when content scrolled more than scrollRatio
   private var whenScrolledClosure: ((CGFloat)->())?
@@ -38,7 +38,7 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
   
   public init(pdfModel: PdfModel) {//Wrong can also be pdfpage
     self.pdfModel = pdfModel
-    let layout = TwoColumnUICollectionViewFlowLayout(pdfModel: pdfModel)
+    let layout = TwoColumnUICollectionViewFlowLayoutOld(pdfModel: pdfModel)
     layout.sectionInset = UIEdgeInsets(top: PdfDisplayOptions.Overview.sideSpacing,
                                        left: PdfDisplayOptions.Overview.sideSpacing,
                                        bottom: PdfDisplayOptions.Overview.sideSpacing,
@@ -89,7 +89,7 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
     if let attr = attributes {
       sourceFrame = self.collectionView.convert(attr.frame, to: self.collectionView.superview?.superview)
     }
-    pdfModel?.index = indexPath.row
+    pdfModel?.currentPage = indexPath.row
     clickCallback?(sourceFrame, pdfModel)
   }
   
@@ -118,7 +118,7 @@ public class PdfOverviewCollectionVC : UICollectionViewController, CanRotate{
 }
 
 // MARK: - PdfOverviewCollectionVC
-extension PdfOverviewCollectionVC {
+extension OldPdfOverviewCollectionVC {
   
   /// Define closure to call when web content has been scrolled
   public func whenScrolled( minRatio: CGFloat, _ closure: @escaping (CGFloat)->() ) {
@@ -142,7 +142,7 @@ extension PdfOverviewCollectionVC {
   }
 }
 
-public class TwoColumnUICollectionViewFlowLayout : UICollectionViewFlowLayout {
+public class TwoColumnUICollectionViewFlowLayoutOld : UICollectionViewFlowLayout {
   
   //An array to cache the calculated attributes
   fileprivate var cachedAttributes = [UICollectionViewLayoutAttributes]()

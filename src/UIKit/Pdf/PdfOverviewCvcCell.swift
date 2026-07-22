@@ -40,7 +40,7 @@ public class PdfOverviewCvcCell : UICollectionViewCell {
     imageWidthConstraint?.isActive = false
     pin(imageView, to: contentView).right.priority = .defaultHigh
     
-    label.numberOfLines = 0
+    label.numberOfLines = 1
     contentView.addSubview(label)
     pin(label.leftGuide(), to: imageView.leftGuide())
     pin(label.rightGuide(), to: contentView.rightGuide())

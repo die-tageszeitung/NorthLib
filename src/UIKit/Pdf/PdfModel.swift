@@ -39,7 +39,7 @@ public protocol PdfModel {
   var title : String? { get }
   var count : Int { get }
   var imageSizeMb : UInt64 { get }
-  var index : Int { get set }
+  var currentPage : Int { get set }
   var defaultRawPageSize: CGSize? { get }
   var singlePageSize: CGSize { get }
   func item(atIndex: Int) -> ZoomedPdfImageSpec?
@@ -84,7 +84,7 @@ class PdfModelItem : PdfModel, DoesLog/*, PDFOutlineStructure*/ {
   private var url:URL?
   var title: String?
   var count: Int = 0
-  var index: Int = 0
+  var currentPage: Int = 0
   var defaultItemSize: CGSize?
     
   var defaultRawPageSize: CGSize?
