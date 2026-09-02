@@ -25,7 +25,7 @@ open class PageCollectionVC: UIViewController {
   // View which is currently displayed
   public var currentView: OptionalView? {
     if let i = index {
-      log("=> PCVC.currentView: \(i)")
+      debug("=> PCVC.currentView: \(i)")
       return collectionView.optionalView(at: i)
     }
     else { return nil }
