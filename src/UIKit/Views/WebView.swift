@@ -519,10 +519,6 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     handleLoadError(err: err)
   }
   
-  public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-    log("WebContent terminated for: \(webView.url?.absoluteString.lastPathComponent)")
-  }
-  
   // MARK: - WKUIDelegate protocol
   
   public func webView(_ webView: WKWebView,
