@@ -241,6 +241,14 @@ public protocol StringConvertible {
   static func toString(_ val: Self) -> String
 }
 
+private protocol AnyOptional {
+  var isNil: Bool { get }
+}
+
+extension Optional: AnyOptional {
+  var isNil: Bool { self == nil }
+}
+
 extension String: StringConvertible {
   public static func fromString(_ str: String?) -> String { str ?? "" }
   public static func toString(_ val: String) -> String { val }
@@ -298,7 +306,13 @@ open class KeyValue<Store: KVStore & Singleton, T: StringConvertible> {
   /// The wrapped value is the interpreted value as type T
   open var wrappedValue: T {
     get { T.fromString(value) }
-    set { value = T.toString(newValue) }
+    set {
+      if let optional = newValue as? AnyOptional, optional.isNil {
+        value = nil
+      } else {
+        value = T.toString(newValue)
+      }
+    }
   }
 
   /// The projected value is the wrapper itself
@@ -329,3 +343,19 @@ open class KeyValue<Store: KVStore & Singleton, T: StringConvertible> {
   }
   
 } // KeyValue
+
+extension Optional: StringConvertible where Wrapped: StringConvertible {
+  public static func fromString(_ str: String?) -> Self {
+    guard let str else {
+      return nil
+    }
+    return Wrapped.fromString(str)
+  }
+
+  public static func toString(_ val: Self) -> String {
+    guard let val else {
+      return ""
+    }
+    return Wrapped.toString(val)
+  }
+}
