@@ -732,7 +732,7 @@ extension WebPagerVC {
     return true
   }
   
-  private var tapEnEdgeButtonWidth: CGFloat { 28.0 }
+  private var tapEnEdgeButtonWidth: CGFloat { Device.isIphone ? 20.0 : 30.0 }
   
   fileprivate var newLeftTapEnEdgeButton: UIView {
     let btn = UIView()

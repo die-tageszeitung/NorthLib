@@ -155,6 +155,7 @@ open class PageCollectionVC: UIViewController {
   
   private let tapEnEdgeButtonWidth: CGFloat = 28.0
   
+  ///Attention: maybe using **newLeftTapEnEdgeButton** in WebPagerVC!
   public lazy var leftTapEnEdgeButton: UIView = {
     let btn = UIView()
     btn.pinWidth(tapEnEdgeButtonWidth)
@@ -175,6 +176,8 @@ open class PageCollectionVC: UIViewController {
     }
     return btn
   }()
+  
+  ///Attention: maybe using **newLeftTapEnEdgeButton** in WebPagerVC!
   public lazy var rightTapEnEdgeButton: UIView = {
     let btn = UIView()
     btn.pinWidth(tapEnEdgeButtonWidth)
