@@ -520,7 +520,7 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   }
   
   public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-    log("WebContent terminated for: \(webView.url?.absoluteString.lastPathComponent)")
+    log("WebContent terminated for: \(webView.url?.absoluteString.lastPathComponent ?? "-")")
   }
   
   // MARK: - WKUIDelegate protocol
