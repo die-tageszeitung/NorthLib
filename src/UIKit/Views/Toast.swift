@@ -20,12 +20,8 @@ public class Toast {
   }
   
   // MARK: Public
-  public static func show(_ text: String, _ type: ToastType = .info, isDefaultToast: Bool = false, _ window: UIWindow? = nil,
+  public static func show(_ text: String, _ type: ToastType = .info, _ window: UIWindow? = nil,
                           minDuration:Double = 2.0, completion:((Bool)->())? = nil) {
-  if isDefaultToast
-    && Defaults.singleton["defaultToastsDisabled"]?.bool == true {
-      return
-  }
     if !Thread.isMainThread {
       onMainAfter {
         Self.show(text,type, window, minDuration: minDuration, completion: completion)
