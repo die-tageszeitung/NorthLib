@@ -188,8 +188,8 @@ open class PageCollectionVC: UIViewController {
     btn.addBorder(.gray.withAlphaComponent(0.25))
     btn.onTapping {[weak self] _ in
       if self?.onRightTapClosure?() == true { return }
+      let idx = self?.index ?? 0
       guard let self = self,
-            let idx = self.index,
             idx <= self.collectionView.count - 1 else { return }
       self.collectionView.scrollToIndex(idx + 1, animated: true)
       guard UIAccessibility.isVoiceOverRunning else { return }
