@@ -27,6 +27,7 @@ public class AlertController : UIAlertController {
 
 /// A wrapper around some UIAlertController using static methods
 open class Alert {
+  public static var cancelAction = UIAlertAction(title: "Abbrechen", style: .cancel)
   public static var sharedAlertTintColor:UIColor?
   
   /// Popup message to user
