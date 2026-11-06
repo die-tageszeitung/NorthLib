@@ -7,18 +7,56 @@
 
 import Foundation
 
+public protocol NotificationObserving: AnyObject {
+  var notificationObservers: [Notification.Observer] { get set }
+}
+
+public extension NotificationObserving {
+  func removeObservers() {
+    notificationObservers.forEach(Notification.remove)
+    notificationObservers.removeAll()
+  }
+  
+  func removeObserver(_ observer: Notification.Observer) {
+      Notification.remove(observer: observer)
+      notificationObservers.removeAll { $0 === observer }
+  }
+}
+
+private final class ObserverToken: @unchecked Sendable {
+  private let lock = NSLock()
+  private var storedValue: Notification.Observer
+
+  init(_ value: Notification.Observer) {
+    storedValue = value
+  }
+
+  var value: Notification.Observer {
+    get {
+      lock.lock()
+      defer { lock.unlock() }
+      return storedValue
+    }
+    set {
+      lock.lock()
+      defer { lock.unlock() }
+      storedValue = newValue
+    }
+  }
+}
+
 public extension Notification {
   
   typealias Observer = NSObjectProtocol?
   
   /// The sender of a Notification
   var sender: Any? { return object }
-
+  
   /// info returns value from userInfo
   func info(_ key: String) -> Any? {
     guard let dict = userInfo, let cont = dict[key] else { return nil }
     return cont
-  } 
+  }
   
   /// The content having been sent
   var content: Any? { info("content") }
@@ -31,13 +69,13 @@ public extension Notification {
    Observer defined by 'receive' and thereby withdraws from further Notifications
    */
   func withdraw() {
-    guard let dict = userInfo, let observer = dict["observer"] as? NSObjectProtocol 
-      else { return }
+    guard let dict = userInfo, let observer = dict["observerToken"] as? NSObjectProtocol
+    else { return }
     Notification.remove(observer: observer)
   }
   
   /// Send Notification
-  static func send(_ message: String, content: Any? = nil, error: Error? = nil, 
+  static func send(_ message: String, content: Any? = nil, error: Error? = nil,
                    sender: Any? = nil) {
     let nn = NSNotification.Name(message)
     var dict: [AnyHashable:Any] = [:]
@@ -48,7 +86,7 @@ public extension Notification {
   }
   
   /// Send Result<Type,Error> as Notification
-  static func send<Type>(_ message: String, result: Result<Type,Error>, 
+  static func send<Type>(_ message: String, result: Result<Type,Error>,
                          sender: Any? = nil) {
     if let err = result.error() {
       send(message, error: err, sender: sender)
@@ -58,47 +96,77 @@ public extension Notification {
   
   /// Receive Notification and return observer object
   @discardableResult
-  static func receive(_ message: Notification.Name, from: Any? = nil,
-                      closure: @escaping (Notification)->()) 
-    -> Observer {
-    var observer: Observer = nil
-    observer = NotificationCenter.default.addObserver(forName: message, 
-                     object: from, queue: nil) { notification in
+  static func receive(_ message: Notification.Name,
+                      from: Any? = nil,
+                      observer: NotificationObserving? = nil,
+                      closure: @escaping (Notification)->())
+  -> Observer {
+    let observerToken = ObserverToken(nil)
+
+    observerToken.value = NotificationCenter.default.addObserver(
+      forName: message,
+      object: from,
+      queue: nil
+    ) { notification in
       var notif = notification
-      var dict: [AnyHashable:Any] = [:]
-      if let passedDict = notification.userInfo { dict = passedDict }
-      dict["observer"] = observer
+      var dict = notification.userInfo ?? [:]
+      dict["observerToken"] = observerToken.value
       notif.userInfo = dict
       closure(notif)
     }
-    return observer
+
+    if let observer {
+      observer.notificationObservers.append(observerToken.value)
+    }
+
+    return observerToken.value
   }
   
   /// Receive Notification and return observer object
   @discardableResult
-  static func receive(_ message: String, from: Any? = nil,
-                      closure: @escaping (Notification)->()) 
-    -> Observer {
-    return receive(NSNotification.Name(message), from: from, closure: closure)
+  static func receive(_ message: String,
+                      from: Any? = nil,
+                      observer: NotificationObserving? = nil,
+                      closure: @escaping (Notification)->())
+  -> Observer {
+    return receive(
+      NSNotification.Name(message),
+      from: from,
+      observer: observer,
+      closure: closure
+    )
   }
   
-  /// Receive Notification and remove observer imediately after receival
-  static func receiveOnce(_ message: Notification.Name, from: Any? = nil,
-                          closure: @escaping (Notification)->()) {
-    receive(message) { notif in
-      notif.withdraw()
-      closure(notif)
-    }
-  }
-  
-  /// Receive Notification and remove observer imediately after receival
+  /// Receive Notification and remove observer immediately after reception
   @discardableResult
-  static func receiveOnce(_ message: String, from: Any? = nil,
+  static func receiveOnce(_ message: Notification.Name,
+                          from: Any? = nil,
+                          observer: NotificationObserving? = nil,
                           closure: @escaping (Notification)->()) -> Observer {
-    return receive(message) { notif in
-      notif.withdraw()
+    return receive(message, from: from, observer: observer) { notif in
+      if let observer,
+         let token = notif.info("observerToken") as? NSObjectProtocol {
+        observer.removeObserver(token)
+      } else {
+        notif.withdraw()
+      }
+
       closure(notif)
     }
+  }
+
+  /// Receive Notification and remove observer immediately after reception
+  @discardableResult
+  static func receiveOnce(_ message: String,
+                          from: Any? = nil,
+                          observer: NotificationObserving? = nil,
+                          closure: @escaping (Notification)->()) -> Observer {
+    return receiveOnce(
+      NSNotification.Name(message),
+      from: from,
+      observer: observer,
+      closure: closure
+    )
   }
   
   /// Remove observer

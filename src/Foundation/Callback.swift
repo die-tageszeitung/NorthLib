@@ -161,7 +161,7 @@ extension ThreadClosure where T == Void {
  ````
  Somewhere else in your source code the Notification may be received using:
  ````
- Notification.receive("test") { notif in
+ Notification.receive("test", observer: self) { notif in
    if let sender = notif.sender { /* do somthing with sender */ }
    if let content = notif.content { /* do something with content */ }
  }

@@ -281,4 +281,25 @@ extension UIViewController{
       }
     }
   }
+  
+  public func removeObserversRecursively() {
+    var visited = Set<ObjectIdentifier>()
+    
+    func removeObservers(from vc: UIViewController) {
+      let identifier = ObjectIdentifier(vc)
+      guard visited.insert(identifier).inserted else { return }
+      
+      (vc as? NotificationObserving)?.removeObservers()
+      
+      vc.children.forEach {
+        removeObservers(from: $0)
+      }
+      
+      if let presented = vc.presentedViewController {
+        removeObservers(from: presented)
+      }
+    }
+    
+    removeObservers(from: self)
+  }
 }

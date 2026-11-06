@@ -34,7 +34,9 @@ public final class Defaults: KVStore, Singleton {
   }
   
   /// The singleton user defaults array
-  public static var singleton: Defaults = Defaults()
+  private static var instance = Defaults()
+  public static var singleton: Defaults { return instance }
+  public static func reinitialize() { instance = Defaults() }
   
   /// Init with suite name to share defaults between apps
   public init(suite: String? = nil) {

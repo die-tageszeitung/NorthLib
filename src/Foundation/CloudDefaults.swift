@@ -25,12 +25,14 @@ public final class CloudDefaults: KVStore, Singleton {
   }
   
   /// The singleton user defaults array
-  public static var singleton: CloudDefaults = CloudDefaults()
+  private static var instance = CloudDefaults()
+  public static var singleton: CloudDefaults { return instance }
+  public static func reinitialize() { instance = CloudDefaults() }
   
   /// Init with suite name to share defaults between apps
   private init(suite: String? = nil) {
     super.init(base: CloudDefaultsBase(suite: suite), name: nil, suite: suite)
-    Notification.receive(NSUbiquitousKeyValueStore.didChangeExternallyNotification)
+    Notification.receive(NSUbiquitousKeyValueStore.didChangeExternallyNotification, observer: self)
     { [weak self] notif in
       guard let self = self else { return }
       if let changedKeys = notif.info(NSUbiquitousKeyValueStoreChangedKeysKey) as?

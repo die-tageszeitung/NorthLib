@@ -36,7 +36,10 @@ extension KVStoreBase {
  Stored keys and values are Strings only.
  */
 
-open class KVStore {
+open class KVStore: NotificationObserving {
+  
+  public var notificationObservers: [Notification.Observer] = []
+  deinit { removeObservers() }
     
   /// An optional additional prefix
   public var suite: String?
@@ -69,7 +72,7 @@ open class KVStore {
   
   /// Syntactic sugar for Notification.receive
   public func receive(key: String? = nil, closure: @escaping (NotificationArg)->()) {
-    Notification.receive(self.name) { notif in
+    Notification.receive(self.name, observer: self) { notif in
       guard let arg = notif.content as? NotificationArg else { return }
       if let key = key { if key == arg.key { closure(arg) } }
       else { closure(arg) }

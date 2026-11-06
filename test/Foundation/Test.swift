@@ -225,7 +225,8 @@ class ThreadClosureTests: XCTestCase {
   
 }
 
-class CallbackTests: XCTestCase {
+class CallbackTests: XCTestCase, NotificationObserving {
+  var notificationObservers: [Notification.Observer] = []
   
   class Test1 {
     @Callback(notification: "test")
@@ -263,8 +264,8 @@ class CallbackTests: XCTestCase {
   func testClosures() {    
     let t1 = Test1()
     var str = ""
-    Notification.receive("dog") { _ in print("dog received") }
-    Notification.receive("test") { notif in
+    Notification.receive("dog", observer: self) { _ in print("dog received") }
+    Notification.receive("test", observer: self) { notif in
       let sender = notif.sender as? Self
       XCTAssertNotNil(sender)
       XCTAssertEqual(sender, self)

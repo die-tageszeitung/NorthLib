@@ -10,8 +10,7 @@ import UIKit
 
 public let globalStylesChangedNotification = "globalStylesChanged"
 
-public protocol UIStyleChangeDelegate where Self: NSObject {
-  
+public protocol UIStyleChangeDelegate: NSObject, NotificationObserving {
   
   /// Function to be called to apply Styles, put your updateable Style Stuff here
   func applyStyles()
@@ -24,10 +23,11 @@ public protocol UIStyleChangeDelegate where Self: NSObject {
 public extension UIStyleChangeDelegate {
   /// Register Handler for Current Object
   /// execute applyStyles() on call
-  func registerForStyleUpdates() {
-    self.applyStyles()
-    Notification.receive(globalStylesChangedNotification) { [weak self] _ in
-      self?.applyStyles()
+    func registerForStyleUpdates() {
+        applyStyles()
+
+        Notification.receive(globalStylesChangedNotification, observer: self) { [weak self] _ in
+            self?.applyStyles()
+        }
     }
-  }
 }
