@@ -78,11 +78,15 @@ open class ContextMenu: NSObject, UIContextMenuInteractionDelegate {
   /// The argument to pass to menu item closures
   public var argument: Any? = nil
   
+  /// Closure called when the context menu is opened
+  public var openClosure: (() -> Void)?
+  
   /// Initialize with a view on which to define the context menu  
-  public init(view: UIView, title: String? = nil, smoothPreviewForImage: Bool = false) {
+  public init(view: UIView, title: String? = nil, smoothPreviewForImage: Bool = false, onOpen: (() -> Void)? = nil) {
     self.view = view
     self.title = title
     self.smoothPreviewForImage = smoothPreviewForImage
+    self.openClosure = onOpen
     super.init()
   }
   
@@ -124,7 +128,8 @@ open class ContextMenu: NSObject, UIContextMenuInteractionDelegate {
   @available(iOS 13.0, *)
   public func contextMenuInteraction(_ interaction: UIContextMenuInteraction, 
     configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
-    return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) 
+    openClosure?()
+    return UIContextMenuConfiguration(identifier: nil, previewProvider: nil)
     { _ -> UIMenu? in 
       return self.createContextMenu()
     }
