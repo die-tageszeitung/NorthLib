@@ -84,7 +84,7 @@ class OptionalWebView: OptionalView, DoesLog {
     }
     webView.baseDir = baseDir
     webView.whenLoaded { [weak self] param in
-      self?.log("=> WebColVc.OWV.createWebView.whenLoaded: \(param)")
+      self?.log("=> WebColVc.OWV.createWebView.whenLoaded: \(webView.url?.lastPathComponent ?? "-")")
       self?.$whenAvailable.notify(sender: self)
       self?.$whenAvailable.removeAll()
     }
