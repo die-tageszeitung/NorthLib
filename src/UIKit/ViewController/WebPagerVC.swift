@@ -37,6 +37,10 @@ public final class WebViewPager: DoesLog {
     [prev, current, next].compactMap { $0 }
   }
   
+  public var allWebviews: [WebView] {
+    [prev, current, next].compactMap { $0?.webView }
+  }
+  
   public func releaseWebviews(){
     webviews.forEach { $0.webView?.release() }
     prev?.webView?.removeFromSuperview()

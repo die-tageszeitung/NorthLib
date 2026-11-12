@@ -237,6 +237,12 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// Max. number of ongoing errors
   private let maxErrorCount = 5
   
+  public var allowAnyReloadOnce: Bool = false
+  public func forceReload(){
+    allowAnyReloadOnce = true
+    reload()
+  }
+  
   /// WARNING Maybe this did not work as expected
   /// in case of release while load and webview was not added to parent Cell (in optionalView) release was not called,
   /// and on available whebview was there but not added to ui => memory Leak; this may not happen with WebPager
@@ -455,6 +461,11 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   // MARK: - WKNavigationDelegate protocol
   public func webView(_ webView: WKWebView, decidePolicyFor nav: WKNavigationAction,
                       decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+    if allowAnyReloadOnce {
+      decisionHandler(.allow)
+      allowAnyReloadOnce = false
+      return
+    }
     ///debug(nav2a(webView: webView, nav: nav))
     if let wv = webView as? WebView {
       let from = wv.originalUrl?.absoluteString
