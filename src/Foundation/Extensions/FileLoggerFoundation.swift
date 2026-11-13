@@ -14,10 +14,6 @@ extension Log.FileLogger {
     if let fn = filename { return URL(fileURLWithPath: fn) }
     else { return nil }
   }
-
-  
-  /// Logfile from last execution
-  public static var lastLogfile: String = tmpLogfile + ".old"
   
   /// FileLogger logging to cache directory
   public static var cached: Log.FileLogger =
