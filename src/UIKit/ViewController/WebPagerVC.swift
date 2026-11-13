@@ -27,6 +27,10 @@ public final class WebViewPager: DoesLog {
     return key
   }
   
+  public func removeAllonDisplayClosures() {
+    onDisplayClosures = [:]
+  }
+  
   public var currentActive: UIView? { current?.activeView }
   
   private(set) var prev: OptionalWebView?

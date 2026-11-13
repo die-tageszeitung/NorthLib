@@ -246,16 +246,33 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// WARNING Maybe this did not work as expected
   /// in case of release while load and webview was not added to parent Cell (in optionalView) release was not called,
   /// and on available whebview was there but not added to ui => memory Leak; this may not happen with WebPager
-  public func release(){
-    self.whenAvailable { _ in }
+  public func release() {
+    log("Release Webview: \(self.title ?? self.url?.lastPathComponent ?? "-")")
+    stopLoading()
+    $whenLoaded.removeAll()
+    $whenLinkPressed.removeAll()
+    $whenLoadError.removeAll()
+    // Remove delegates
+    navigationDelegate = nil
+    uiDelegate = nil
+    scrollView.delegate = nil
+    
+    // Remove JavaScript message handlers
     if #available(iOS 14.0, *) {
-      self.configuration.userContentController.removeAllScriptMessageHandlers()
-    }//iOS14
+      configuration.userContentController.removeAllScriptMessageHandlers()
+    }
     for obj in bridgeObjects {
       self.configuration.userContentController.removeScriptMessageHandler(forName: obj.key)
     }
+    bridgeObjects.removeAll()
+    
+    // Remove notifications
     NotificationCenter.default.removeObserver(self)
+    
+    // Remove from view hierarchy
+    removeFromSuperview()
   }
+  
   
   /// The closures to call when content has been loaded
   @Callback<WebView>
