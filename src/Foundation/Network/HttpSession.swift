@@ -238,6 +238,8 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
   /// Set waitForAvailability to true if a connection should wait for network availability
   public var waitForAvailability = false { didSet { _config = nil } }
 
+  fileprivate var lastDownloadError: NSError?
+  
   fileprivate var _config: URLSessionConfiguration? { didSet { _session = nil } }
   /// Session configuration
   public var config: URLSessionConfiguration {
@@ -595,9 +597,15 @@ open class HttpSession: NSObject, URLSessionDelegate, URLSessionTaskDelegate, UR
         err = HttpError.serverError(statusCode)
       }
     }
-    if err != nil { 
-      error("Task \(cid): Download failed.")
-      error(err!) 
+    if err != nil {
+      if let currentError = err as? NSError,
+         currentError.code == lastDownloadError?.code {
+        /// Do not log the same error for different file downloads twice; reset by downloadqueue in HttpLoader
+      } else {
+        lastDownloadError = err as? NSError
+        error("Task \(cid): Download failed.")
+        error(err!)
+      }
     }
     else { debug("Task \(cid): Finished data transfer successfully") }
     closeJob(cid: cid, error: err)
@@ -840,6 +848,7 @@ open class HttpLoader: ToString, DoesLog {
   public func download(_ files: [DlFile], 
                        onProgress: ((HttpLoader, Int64, Int64)->())? = nil,
                        atEnd: @escaping (HttpLoader)->()) {
+    session.lastDownloadError = nil///reset last download error for new log
     self.closure = atEnd
     self.progressClosure = onProgress
     DispatchQueue.global(qos: .background).async { [weak self] in
