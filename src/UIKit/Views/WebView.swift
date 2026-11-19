@@ -237,10 +237,25 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// Max. number of ongoing errors
   private let maxErrorCount = 5
   
+  private var isRecovering = false
+  
   public var allowAnyReloadOnce: Bool = false
   public func forceReload(){
     allowAnyReloadOnce = true
     reload()
+  }
+  
+  /// Recovers the WebView after its WebContent process was terminated.
+  public func recoverIfNeeded() {
+    guard !isRecovering,
+          let originalUrl,
+          url == nil else {
+      return
+    }
+
+    isRecovering = true
+    log("Recovering WebView: \(originalUrl.lastPathComponent)")
+    load(url: originalUrl)
   }
   
   /// WARNING Maybe this did not work as expected
@@ -471,7 +486,8 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   
   public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
     self.errorCount = 0
-    isBridgeLoaded = false
+    self.isBridgeLoaded = false
+    self.isRecovering = false
     $whenLoaded.notify(sender: self, content: self)
   }
   
@@ -516,23 +532,25 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     if let curl = url, File(curl).exists {
       debug("File exist but could not be loaded, try to reload url: \(curl) err count:\(errorCount)")
       onMain(after: 0.1) { [weak self] in
-        guard let url = self?.originalUrl else { return }
-        self?.load(URLRequest(url: url))
+        guard let self, let url = self.originalUrl else { return }
+        self.load(URLRequest(url: url))
       }
       return
     }
     
-    if self.errorCount >= self.maxErrorCount {
+    if errorCount >= maxErrorCount {
       error(err)
       error("Load failed after \(maxErrorCount) retries")
+      isRecovering = false
       $whenLoadError.notify(sender: self, content: err)
     }
     else {
       debug("Load error after \(errorCount) retries:\n  \(err)")
       onMain(after: 0.1 * 2**errorCount) { [weak self] in
-        guard let url = self?.originalUrl else { return }
-        if self?.errorCount == 0 { return }
-        self?.load(URLRequest(url: url))
+        guard let self,
+              self.errorCount > 0,
+              let url = self.originalUrl else { return }
+        self.load(URLRequest(url: url))
       }
     }
   }
@@ -548,7 +566,9 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   }
   
   public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-    log("WebContent terminated for: \(webView.url?.absoluteString.lastPathComponent ?? "-")")
+    log("WebContent terminated for: \(webView.url?.lastPathComponent ?? "nil")")
+    guard let webView = webView as? WebView else { return }
+    webView.recoverIfNeeded()
   }
   
   // MARK: - WKUIDelegate protocol

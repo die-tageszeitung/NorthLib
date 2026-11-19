@@ -275,6 +275,19 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     pager.webviews.forEach{ $0.webView?.reload() }
   }
   
+  /// Reloads WebViews whose WebContent process was terminated.
+  /// This is a fallback in case the termination callback was not handled.
+  open func reloadAllWebViewsIfNeeded() {
+    pager.webviews.forEach {
+      guard let webView = $0.webView,
+            webView.url == nil else {
+        return
+      }
+      log("WebView has no current URL, original: \(webView.originalUrl?.absoluteString ?? "nil")")
+      webView.recoverIfNeeded()
+    }
+  }
+  
   public func gotoIndex(index: Int) {
     if self.view.window != nil {
       self.scrollTo(index: index)
@@ -490,6 +503,7 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
       }
     }
     else {
+      log("release in update...")
       container.subviews.forEach {
         if let wv = $0 as? WebView { wv.release() }
         $0.removeFromSuperview()
