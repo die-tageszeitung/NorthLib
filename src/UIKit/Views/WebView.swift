@@ -230,7 +230,11 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     else { return nil }
   }
   /// The original URL to load
-  public var originalUrl: URL?
+  public var originalUrl: URL? {
+    didSet {
+      lastContentOffset = nil
+    }
+  }
   
   /// Number of load errors
   private var errorCount: Int = 0
@@ -239,12 +243,18 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   
   private var isRecovering = false
   
-  private var recoveryContentOffset: CGPoint?
+  private var lastContentOffset: CGPoint?
   
   public var allowAnyReloadOnce: Bool = false
   public func forceReload(){
     allowAnyReloadOnce = true
     reload()
+  }
+  
+  /// Remembers the current scroll position before the app enters the background.
+  public func rememberScrollPosition() {
+    lastContentOffset = scrollView.contentOffset
+    debug("Remember scroll position for \(originalUrl?.lastPathComponent ?? "-"): \(lastContentOffset ?? .zero)")
   }
   
   /// Recovers the WebView after its WebContent process was terminated.
@@ -256,8 +266,7 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     }
 
     isRecovering = true
-    recoveryContentOffset = scrollView.contentOffset
-    log("Recovering WebView: \(originalUrl.lastPathComponent) Scroll position: \(recoveryContentOffset ?? .zero)")
+    log("Recovering WebView: \(originalUrl.lastPathComponent) Scroll position: \(lastContentOffset ?? .zero)")
     load(url: originalUrl)
   }
   
@@ -491,8 +500,8 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     self.errorCount = 0
     self.isBridgeLoaded = false
     self.isRecovering = false
-    if let offset = recoveryContentOffset {
-      recoveryContentOffset = nil
+    if let offset = lastContentOffset {
+      lastContentOffset = nil
 
       DispatchQueue.main.async { [weak self] in
         self?.scrollView.setContentOffset(offset, animated: false)

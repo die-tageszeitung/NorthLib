@@ -275,6 +275,13 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
     pager.webviews.forEach{ $0.webView?.reload() }
   }
   
+  /// Remembers the scroll positions of all WebViews before the app enters the background.
+  open func rememberScrollPositions() {
+    pager.webviews.forEach {
+      $0.webView?.rememberScrollPosition()
+    }
+  }
+  
   /// Reloads WebViews whose WebContent process was terminated.
   /// This is a fallback in case the termination callback was not handled.
   open func reloadAllWebViewsIfNeeded() {
