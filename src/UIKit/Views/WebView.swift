@@ -239,6 +239,8 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   
   private var isRecovering = false
   
+  private var recoveryContentOffset: CGPoint?
+  
   public var allowAnyReloadOnce: Bool = false
   public func forceReload(){
     allowAnyReloadOnce = true
@@ -254,7 +256,8 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     }
 
     isRecovering = true
-    log("Recovering WebView: \(originalUrl.lastPathComponent)")
+    recoveryContentOffset = scrollView.contentOffset
+    log("Recovering WebView: \(originalUrl.lastPathComponent) Scroll position: \(recoveryContentOffset ?? .zero)")
     load(url: originalUrl)
   }
   
@@ -488,6 +491,13 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     self.errorCount = 0
     self.isBridgeLoaded = false
     self.isRecovering = false
+    if let offset = recoveryContentOffset {
+      recoveryContentOffset = nil
+
+      DispatchQueue.main.async { [weak self] in
+        self?.scrollView.setContentOffset(offset, animated: false)
+      }
+    }
     $whenLoaded.notify(sender: self, content: self)
   }
   
