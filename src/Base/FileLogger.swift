@@ -16,7 +16,7 @@ extension Log {
     public static let maxAge: TimeInterval = 48 * 3600
     public static let maxSize = 300 * 1024
     
-    public func rotateIfNeeded() {
+    public func rotateIfNeeded(force:Bool = false) {
       guard let fn = filename else { return }
       
       let file = File(fn)
@@ -25,13 +25,23 @@ extension Log {
       ///do not rotate empty files initially
       guard file.size > 0 else { return }
       
-      guard age > Self.maxAge || file.size > Self.maxSize else {
+      var reason: String
+      
+      if force {
+        reason = "force"
+      }
+      else if age > Self.maxAge {
+        reason = "too old"
+      }
+      else if file.size > Self.maxSize{
+        reason = "too big"
+      } else {
         return
       }
       ///Log only appears on App-Resume not in Application Start
-      Log.log("###### Rotate Logfile while App is Running #########")
+      Log.log("###### Rotate Logfile \(reason) #########")
       rotate()
-      Log.log("###### Rotated Logfile while App is Running #########")
+      Log.log("###### Rotated Logfile \(reason) #########")
     }
      
     @discardableResult
