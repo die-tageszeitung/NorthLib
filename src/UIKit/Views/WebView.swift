@@ -500,14 +500,13 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     self.errorCount = 0
     self.isBridgeLoaded = false
     self.isRecovering = false
+    $whenLoaded.notify(sender: self, content: self)
     if let offset = lastContentOffset {
       lastContentOffset = nil
-
-      DispatchQueue.main.async { [weak self] in
+      onMainAfter {[weak self] in
         self?.scrollView.setContentOffset(offset, animated: false)
       }
     }
-    $whenLoaded.notify(sender: self, content: self)
   }
   
   // MARK: - WKNavigationDelegate protocol
