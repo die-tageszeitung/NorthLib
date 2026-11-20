@@ -501,11 +501,14 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     self.errorCount = 0
     self.isBridgeLoaded = false
     self.isRecovering = false
-    if let offset = lastContentOffset {
+    
+    if UIApplication.shared.applicationState == .active,
+       let offset = lastContentOffset {
       lastContentOffset = nil
-
+      log("finish load and restore: \(offset) for \(webView.url?.lastPathComponent ?? "-")")
       DispatchQueue.main.async { [weak self] in
         self?.scrollView.setContentOffset(offset, animated: false)
+        self?.log("restored: \(offset) for \(webView.url?.lastPathComponent ?? "-")")
       }
     }
     $whenLoaded.notify(sender: self, content: self)
