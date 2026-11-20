@@ -232,6 +232,7 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// The original URL to load
   public var originalUrl: URL? {
     didSet {
+      log("set: \(originalUrl?.lastPathComponent ?? "-") reset lastContentOffset")
       lastContentOffset = nil
     }
   }
@@ -253,7 +254,9 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   
   /// Remembers the current scroll position before the app enters the background.
   public func rememberScrollPosition() {
-    lastContentOffset = scrollView.contentOffset
+    let offset = scrollView.contentOffset
+    if offset.x < 10 && offset.y < 10 { return }
+    lastContentOffset = offset
     debug("Remember scroll position for \(originalUrl?.lastPathComponent ?? "-"): \(lastContentOffset ?? .zero)")
   }
   
