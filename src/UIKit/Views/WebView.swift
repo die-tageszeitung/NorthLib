@@ -230,12 +230,7 @@ open class WebView: WKWebView, WKScriptMessageHandler,
     else { return nil }
   }
   /// The original URL to load
-  public var originalUrl: URL? {
-    didSet {
-      log("set: \(originalUrl?.lastPathComponent ?? "-") reset lastContentOffset")
-      lastContentOffset = nil
-    }
-  }
+  public var originalUrl: URL?
   
   /// Number of load errors
   private var errorCount: Int = 0
@@ -255,9 +250,12 @@ open class WebView: WKWebView, WKScriptMessageHandler,
   /// Remembers the current scroll position before the app enters the background.
   public func rememberScrollPosition() {
     let offset = scrollView.contentOffset
-    if offset.x < 10 && offset.y < 10 { return }
+    if offset.x < 10 && offset.y < 10 {
+      log("do not Remember scroll position for \(originalUrl?.lastPathComponent ?? "-"): \(lastContentOffset ?? .zero)")
+      return
+    }
     lastContentOffset = offset
-    debug("Remember scroll position for \(originalUrl?.lastPathComponent ?? "-"): \(lastContentOffset ?? .zero)")
+    log("Remember scroll position for \(originalUrl?.lastPathComponent ?? "-"): \(lastContentOffset ?? .zero)")
   }
   
   /// Recovers the WebView after its WebContent process was terminated.
