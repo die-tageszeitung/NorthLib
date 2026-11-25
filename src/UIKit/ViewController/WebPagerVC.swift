@@ -284,14 +284,19 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   
   /// Reloads WebViews whose WebContent process was terminated.
   /// This is a fallback in case the termination callback was not handled.
-  open func reloadAllWebViewsIfNeeded() {
-    pager.webviews.forEach {
-      guard let webView = $0.webView,
-            webView.url == nil else {
-        return
+  /// Returns all WebViews that have a current URL.
+  open func reloadAllWebViewsIfNeeded() -> [WebView] {
+    pager.webviews.compactMap {
+      guard let webView = $0.webView else {
+        return nil
       }
-      log("WebView has no current URL, original: \(webView.originalUrl?.absoluteString ?? "nil")")
-      webView.recoverIfNeeded()
+
+      if webView.url == nil {
+        log("WebView has no current URL, original: \(webView.originalUrl?.absoluteString ?? "nil")")
+        webView.recoverIfNeeded()
+        return nil
+      }
+      return webView
     }
   }
   
