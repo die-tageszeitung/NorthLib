@@ -556,6 +556,12 @@ open class WebView: WKWebView, WKScriptMessageHandler,
       debug("File exist but could not be loaded, try to reload url: \(curl) err count:\(errorCount)")
       onMain(after: 0.1) { [weak self] in
         guard let self, let url = self.originalUrl else { return }
+        ///Evaluate: in case of errors due loading a refresh will be done and scrollpos is lost,
+        ///but this code did not prevent reload, reload is fired from somewhere else also
+//        if self.isAvailable == true {
+//          self.log("Skip reload after error for: \(curl.absoluteString.lastPathComponent)")
+//          return
+//        }
         self.load(URLRequest(url: url))
       }
       return
@@ -573,6 +579,12 @@ open class WebView: WKWebView, WKScriptMessageHandler,
         guard let self,
               self.errorCount > 0,
               let url = self.originalUrl else { return }
+        ///Evaluate: in case of errors due loading a refresh will be done and scrollpos is lost,
+        ///but this code did not prevent reload, reload is fired from somewhere else also
+//        if self.isAvailable == true {
+//          self.log("Skip reload after \(errorCount) error retries for: \(url.absoluteString.lastPathComponent)")
+//          return
+//        }
         self.load(URLRequest(url: url))
       }
     }

@@ -270,9 +270,15 @@ open class WebPagerVC: UIViewController, UIScrollViewDelegate {
   public func removeOnDisplay(forKey: String) {
     return pager.onDisplayClosures[forKey] = nil
   }
-  
-  open func reloadAllWebViews(){
-    pager.webviews.forEach{ $0.webView?.reload() }
+   
+  open func reloadAllWebViews(excludeCurrent: Bool = false) {
+    pager.webviews.forEach {
+      guard !excludeCurrent || $0.webView != currentWebView || currentWebView?.isAvailable == false else {
+        return
+      }
+      ///warning prev and next will loose their scrollpos
+      $0.webView?.reload()
+    }
   }
   
   /// Remembers the scroll positions of all WebViews before the app enters the background.
